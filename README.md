@@ -4,7 +4,7 @@ A research prototype for lower-limb CT analysis: segment femur and tibia
 from CT, build 3D meshes, place anatomical landmarks, and compute
 mechanical axes and alignment angles.
 
-<img width="2873" height="852" alt="Frame 3" src="https://github.com/user-attachments/assets/4c9b2855-fa56-49c3-8333-5c490fe793d4" />
+<img width="2873" height="852" alt="FemuraLabs Banner" src="https://github.com/user-attachments/assets/4c9b2855-fa56-49c3-8333-5c490fe793d4" />
 
 
 ## What it does (eventually)
