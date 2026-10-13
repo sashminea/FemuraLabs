@@ -12,3 +12,12 @@ def zscore_batch(batch: np.ndarray, eps: float=1e-8) -> np.ndarray:
 	std = b.std(axis=(1, 2, 3), keepdims=True)
 	return (b - mean) / (std + eps)
 
+
+def window_to_uint8(hu: np.ndarray, level: float, width: float) -> np.ndarray:
+	"""Map HU values to 0-255 with a linear window; for display only."""
+
+	lower = level - width / 2.0
+	d = 255.0 * (hu.astype(np.float32) - lower) / width
+	return np.clip(d, 0, 255).astype(np.uint8)
+
+
