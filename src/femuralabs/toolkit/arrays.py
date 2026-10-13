@@ -20,4 +20,19 @@ def window_to_uint8(hu: np.ndarray, level: float, width: float) -> np.ndarray:
 	d = 255.0 * (hu.astype(np.float32) - lower) / width
 	return np.clip(d, 0, 255).astype(np.uint8)
 
-
+def conv2d(
+	image: np.ndarray,
+	kernel: np.ndarray,
+	stride: int = 1,
+	pad: int = 0,
+	) -> np.ndarray:
+	"""Slide a square kernel over a square image (no kernel flip)."""
+	img = np.pad(image.astype(float), pad)
+	k = kernel.shape[0]
+	n = (img.shape[0] - k) // stride + 1
+	out = np.zeros((n, n))
+	for i in range(n):
+		for j in range(n):
+			patch = img[i * stride : i * stride + k, j * stride : j * stride + k]
+			out[i, j] = (patch * kernel).sum()
+	return out

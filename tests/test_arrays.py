@@ -2,6 +2,7 @@ import numpy as np
 
 from femuralabs.toolkit.arrays import zscore_batch
 from femuralabs.toolkit.arrays import window_to_uint8
+from femuralabs.toolkit.arrays import conv2d
 
 def test_zscore_removes_brightness_and_scale():
 	v = np.arange(24, dtype=float).reshape(2, 3, 4)
@@ -21,3 +22,29 @@ def test_window_clips_at_edges():
 	out = window_to_uint8(np.array([-1000.0, 1000.0]), 400, 1500)
 	assert out[0] == 0
 	assert out[1] == 229
+
+
+SOBEL = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
+
+IMG = np.array(
+	[
+		[1, 2, 0, 1, 3],
+		[3, 1, 2, 0, 1],
+		[0, 2, 1, 3, 2],
+		[1, 0, 2, 1, 0],
+		[2, 1, 0, 2, 1],
+	])
+
+def test_conv_matches_hand_result():
+	hand = np.array(
+		[
+			[-2, -2, 2],
+			[2, 2, -1],
+			[1, 4, -2],
+		]
+		)
+	assert np.allclose(conv2d(IMG, SOBEL), hand)
+
+def test_conv_output_size_formula():
+	out = conv2d(np.zeros((128, 128)), np.ones((3, 3)), stride=2, pad=1)
+	assert out.shape == (64, 64)
