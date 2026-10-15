@@ -1,0 +1,7 @@
+{
+  "seed": 0,
+  "epochs": 5,
+  "batch_size": 64,
+  "lr": 0.01,
+  "run_name": "run_b"
+}
