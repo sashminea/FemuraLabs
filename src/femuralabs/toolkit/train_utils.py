@@ -109,3 +109,44 @@ def max_abs_diff(path_a: Path, path_b: Path, key: str = "val_loss") -> float:
 	"""Return the largest absolute difference of one column between two runs."""
 	a, b = read_metrics(path_a)[key], read_metrics(path_b)[key]
 	return max(abs(x-y) for x, y in zip(a, b))
+
+def train_one_epoch(
+	model: torch.nn.Module,
+	loader,
+	loss_fn,
+	optimizer: torch.optim.Optimizer,
+	device: torch.device,
+	) -> float:
+	"""Run one pass over the training data and return the mean loss."""
+	model.train()
+	total, count = 0.0, 0
+	for inputs, targets in loader:
+		inputs, targets = inputs.to(device), targets.to(device)
+		optimizer.zero_grad()
+		outputs = model(inputs)
+		loss = loss_fn(outputs, targets)
+		loss.backward()
+		optimizer.step()
+		total += loss.item() * inputs.shape[0]
+		count += inputs.shape[0]
+	return total / count
+
+@torch.no_grad()
+def evaluate_with_accuracy(
+	model: torch.nn.Module,
+	loader,
+	loss_fn,
+	device: torch.device,
+	) -> tuple[float, float]:
+	"""Return (mean loss, accuracy) on a loader without changing weights."""
+	model.eval()
+	total, correct, count = 0.0, 0, 0
+	for inputs, targets in loader:
+		inputs, targets = inputs.to(device), targets.to(device)
+		outputs = model(inputs)
+		total += loss_fn(outputs, targets).item() * inputs.shape[0]
+		correct += (outputs.argmax(dim=1) == targets).sum().item()
+		count += inputs.shape[0]
+	return total / count, correct / count
+
+
