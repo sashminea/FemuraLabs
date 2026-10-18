@@ -3,7 +3,7 @@
 import sys
 from pathlib import Path
 
-from femuralabs.toolkit.train_utils import  max_abs_diff
+from femuralabs.toolkit.training.train_utils import  max_abs_diff
 
 def main() -> int:
 	a, b = Path(sys.argv[1]), Path(sys.argv[2])

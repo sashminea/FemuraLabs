@@ -7,6 +7,34 @@ entry before changing the behaviour it describes.
 Entries are numbered; new ones go at the top. Every entry has the same four
 parts: **Decision**, **Alternative rejected**, **Reason**, **Consequence**.
 
+## D010: organize `toolkit` into `training/` and `service/` subpackages
+
+**Decision:** `model.py` and `train_utils.py` live under
+`femuralabs.toolkit.training`; `routes.py`, `api.py` and `serve.py` live under
+`femuralabs.toolkit.service`. `arrays.py`, `summary.py`, `volume_info.py` and
+`cli.py` stay flat at `femuralabs.toolkit.*`. The rule for a future
+subpackage is stated below.
+
+**Alternative rejected:** Group everything into subpackages by domain
+(`image/`, `geometry/`, `io/`, …) in the same change.
+
+**Reason:** A folder with one file in it adds a path segment to every import
+and to every `python -m` command, without grouping anything. The two groups
+created here have two or more files each, share one coherent purpose, and are
+expected to grow (`training/` will gain datasets and losses; `service/` will
+gain routes, middleware, healthchecks). The singletons are one file each and
+grow into a folder when their second file arrives, not before.
+
+**Rule adopted:** a subpackage appears when two or more files share one
+coherent purpose and are expected to grow. Singletons stay flat.
+
+**Consequence:** `python -m femuralabs.toolkit.service.serve` replaces the
+previous `python -m femuralabs.toolkit.serve` in the runbook and any external
+notes. The `Dockerfile` is unaffected: it copies `src/` wholesale and starts
+`scripts/hello_pipeline.py`, neither of which references the moved modules.
+No refactor is done again on this folder until a singleton gains a second
+file, or a subpackage gains a fourth that is clearly distinct.
+
 ## D008: module named `serve.py`, not `server.py`
 
 **Decision:** The HTTP entry point is `src/femuralabs/toolkit/serve.py`, and

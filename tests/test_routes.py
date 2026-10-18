@@ -1,6 +1,6 @@
 """Protect the three branches of routes.route"""
 
-from femuralabs.toolkit.routes import route
+from femuralabs.toolkit.service.routes import route
 
 def test_health_route():
 	assert route("/health") == (200, {"status": "ok"})

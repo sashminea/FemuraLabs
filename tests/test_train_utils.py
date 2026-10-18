@@ -2,8 +2,8 @@
 
 import torch
 
-from femuralabs.toolkit.model import SmallCNN
-from femuralabs.toolkit.train_utils import load_checkpoint, save_checkpoint, set_seed
+from femuralabs.toolkit.training.model import SmallCNN
+from femuralabs.toolkit.training.train_utils import load_checkpoint, save_checkpoint, set_seed
 
 def test_same_seed_same_number():
 	set_seed(3)

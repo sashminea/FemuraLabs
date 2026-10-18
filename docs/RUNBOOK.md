@@ -153,7 +153,7 @@ checkout is designed to catch.
 
 Starts a small HTTP service that answers two JSON routes. No Docker needed.
 
-    PYTHONPATH=src python -m femuralabs.toolkit.serve
+    PYTHONPATH=src python -m femuralabs.toolkit.service.serve
     # prints: serving on 0.0.0.0:8000
 
 In a second terminal:

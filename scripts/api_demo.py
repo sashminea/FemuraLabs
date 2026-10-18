@@ -5,7 +5,7 @@ import urllib.error
 import urllib.request
 from http.server import HTTPServer
 
-from femuralabs.toolkit.api import Handler
+from femuralabs.toolkit.service.api import Handler
 
 
 def main() -> int:

@@ -31,11 +31,17 @@ The repository is a learning and research exercise.
     src/femuralabs/          Importable package. Only place code may be added as a module.
       toolkit/
         arrays.py            NumPy array helpers (zscore, window, conv2d).
-        model.py             SmallCNN.
         summary.py           Statistics of a .npy file; also a command line.
-        train_utils.py       Seeding, device, checkpoints, logging, plotting.
         volume_info.py       make_volume, describe (shape, spacing, extent).
-
+        cli.py               Command-line geometry tool.
+        training/
+          model.py           SmallCNN.
+          train_utils.py     Seeding, device, checkpoints, logging, plotting.
+        service/
+          routes.py          Pure request routing.
+          api.py             HTTP handler.
+          serve.py           Process entry point (binds 0.0.0.0:PORT).
+          
     scripts/                 One-off scripts, run by hand.
       hello_pipeline.py      Prints the geometry of a synthetic volume.
       train_small_cnn.py     Training loop with seeded reproducibility.

@@ -10,8 +10,8 @@ from torch import nn
 from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
 
-from femuralabs.toolkit.model import SmallCNN
-from femuralabs.toolkit.train_utils import (
+from femuralabs.toolkit.training.model import SmallCNN
+from femuralabs.toolkit.training.train_utils import (
     append_row,
     evaluate_with_accuracy,
     get_device,

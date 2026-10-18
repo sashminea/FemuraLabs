@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from http.server import BaseHTTPRequestHandler
 
-from femuralabs.toolkit.routes import route
+from femuralabs.toolkit.service.routes import route
 
 
 class Handler(BaseHTTPRequestHandler):
