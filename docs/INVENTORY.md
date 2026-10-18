@@ -1,37 +1,48 @@
-# Project inventory
+# File inventory
 
-Every tracked file, its kind, its inputs → outputs, and where it came from.
-Kept accurate by `scripts/check_tree.py` (run before every commit).
+Every file tracked by git, described in one or two sentences that stand on
+their own. A reader should not need any other document to understand what a
+file is for.
 
-Kinds: **module** = importable, returns values, prints nothing; **script** = run by hand;
-**config** = read by a tool; **docs** = prose; **run output** = produced by a script.
+**Kinds:** `module` = Python code under `src/`, imported by other files;
+`script` = Python under `scripts/`, run by hand; `test` = pytest file under
+`tests/`; `config` = read by a tool; `docs` = prose; `notebook` = exploration;
+`figure` = image for reports; `run output` = written by a script (committed in
+error, pending cleanup).
 
-| Path | Kind | In → out | Introduced |
-|---|---|---|---|
-| `.dockerignore` | config | — | Block 1.3 |
-| `.gitignore` | config | — | pre-docker |
-| `Dockerfile` | config | project files → image | Block 1.3 |
-| `README.md` | docs | — | pre-docker |
-| `conftest.py` | config | makes `src/` importable for pytest | pre-docker |
-| `data/.gitkeep` | placeholder | — | pre-docker |
-| `docs/INVENTORY.md` | docs | — | this block |
-| `docs/docker_adaptations.md` | docs | — | this block |
-| `docs/RUNBOOK.md` | docs | — | this block |
-| `notebooks/01_numpy_images.ipynb` | notebook | — | pre-docker |
-| `notebooks/02_pytorch_loop.ipynb` | notebook | — | pre-docker |
-| `reports/*.png`, `reports/*.jpg` | figures | — | pre-docker |
-| `requirements-tool.txt` | config | numpy pin for the tool image | Block 1.3 |
-| `requirements.txt` | config | full env (incl. torch CUDA) | pre-docker |
-| `runs/run_a/*`, `runs/run_b/*` | run output | — | pre-docker |
-| `scripts/check_tree.py` | script | tree → ok/MISSING lines | this block |
-| `scripts/compare_runs.py` | script | two `metrics.csv` → max diff | pre-docker |
-| `scripts/hello_pipeline.py` | script | — → 3 printed lines | Block 1.2 |
-| `scripts/train_small_cnn.py` | script | flags → `runs/`, `reports/` | pre-docker |
-| `src/femuralabs/__init__.py` | package marker | — | pre-docker |
-| `src/femuralabs/toolkit/__init__.py` | package marker | — | pre-docker |
-| `src/femuralabs/toolkit/arrays.py` | module | array → array (zscore, window, conv2d) | pre-docker |
-| `src/femuralabs/toolkit/model.py` | module | tensor batch → logits | pre-docker |
-| `src/femuralabs/toolkit/summary.py` | module | `.npy` path → `ArraySummary` | pre-docker |
-| `src/femuralabs/toolkit/train_utils.py` | module | training building blocks | pre-docker |
-| `tests/test_arrays.py` | test | — → pass/fail | pre-docker |
-| `tests/test_train_utils.py` | test | — → pass/fail | pre-docker |
+| Path | Kind | Description |
+|---|---|---|
+| `.dockerignore` | config | Excludes `.git`, `.venv`, `__pycache__`, `data/`, `runs/`, `reports/`, `notebooks/`, `docs/`, `tests/`, `*.nii.gz`, `*.ipynb` and `.env` from the Docker build context. Without it, the entire virtual environment — including PyTorch, several gigabytes — is transferred to the Docker daemon on every build. |
+| `.gitignore` | config | Excludes `.venv/`, `__pycache__/`, `*.pyc` and the contents of `data/` (with `data/.gitkeep` in git to preserve the folder). Files under `runs/`, `reports/` and `notebooks/` were committed before this rule applied and remain tracked; see D006 in `DECISIONS.md`. |
+| `AGENTS.md` | docs | Instructions for any AI agent or new contributor: repository layout, the rule against duplicate functions, the documentation that must be kept accurate, the working protocol, commit message format, and the constraints that protect reproducibility and privacy. Start here. |
+| `Dockerfile` | config | Builds the `toolkit-hello` image. Starts from `python:3.12-slim`, copies and installs `requirements-tool.txt`, copies `src/` and `scripts/`, sets `PYTHONPATH=/app/src` so `femuralabs` resolves inside the image, and runs `scripts/hello_pipeline.py` by default. The order of the `COPY` and `RUN` instructions is deliberate: dependencies first, source code last, so a rebuild after a source edit reuses the dependency layer. |
+| `README.md` | docs | Public entry point. One paragraph of purpose, a quick-start block that a stranger can follow, the test command, and a limits block that states clearly that the project is a research prototype and not a tool for clinical decisions. Maintainer detail belongs in `docs/`, not here. |
+| `conftest.py` | config | Prepends `src/` to `sys.path` so pytest can `import femuralabs` without a `PYTHONPATH` prefix. Placed at project root so it applies to every file under `tests/`. |
+| `data/.gitkeep` | placeholder | Keeps the empty `data/` folder in git while excluding everything inside it. The folder holds downloaded arrays and generated test data; nothing in it is committed. |
+| `docs/DECISIONS.md` | docs | Every design choice in this repository that could reasonably have been made differently, with the alternative that was rejected and the reason. Read an entry before changing the behaviour it describes. New entries go at the top. |
+| `docs/INVENTORY.md` | docs | This file. Describes every tracked path. Read before adding a file, so that an existing one is not duplicated. |
+| `docs/RUNBOOK.md` | docs | Every command that has been run on this workstation, with the expected output, what the step proves, and what a failure means. Read before running anything for the first time. |
+| `notebooks/01_numpy_images.ipynb` | notebook | Exploration: building, slicing, normalising, and windowing a small volume interactively. No functions are defined here; every call is into `femuralabs.toolkit`. Kept as a record of how the toolkit's behaviour was checked by hand. |
+| `notebooks/02_pytorch_loop.ipynb` | notebook | Exploration: running the training loop interactively and inspecting per-epoch values. Same rule as the first notebook: calls into modules, no definitions. |
+| `reports/hand_convolution.jpg` | figure | Photograph of the hand-worked 5×5 image convolution. Kept as evidence that the reference `conv2d` result was computed by hand before the loop was trusted. |
+| `reports/histogram.png` | figure | Histogram of a CT-like intensity array, saved at 200 dpi for reports. Regenerated by `notebooks/01_numpy_images.ipynb`. |
+| `reports/notebook_check.png` | figure | Snapshot of the notebook run used to verify that every cell executes cleanly after a kernel restart. |
+| `reports/run_a_curves.png`, `reports/run_b_curves.png` | figure | Training and validation loss curves from two training runs, both seeded with the same value. The two curves being nearly identical is the reproducibility check. |
+| `reports/window_curve.png` | figure | Plot of the linear intensity window over a range of Hounsfield units, showing clipping below `L − W/2` and above `L + W/2`. |
+| `requirements-tool.txt` | config | The pinned `numpy` version that the tool container installs. Kept separate from `requirements.txt` because that file pulls PyTorch from the CUDA wheel index and would multiply the image size. Update together with `requirements.txt` when numpy's version changes. |
+| `requirements.txt` | config | The development environment: PyTorch (CUDA wheel from the PyTorch index), torchvision, numpy, matplotlib, pytest. Used by the training scripts, not by the tool container. |
+| `runs/run_a/config.json`, `runs/run_a/metrics.csv` | run output | Command-line settings and per-epoch metrics from one training run. Committed before the `.gitignore` rule existed; see D006 in `DECISIONS.md`. |
+| `runs/run_b/config.json`, `runs/run_b/metrics.csv` | run output | Settings and metrics from a second run with an identical seed. Compared with `run_a` by `scripts/compare_runs.py` to demonstrate reproducibility. Same tracking situation as `run_a`. |
+| `scripts/check_tree.py` | script | Verifies that every file the project claims to contain exists on disk. Exits non-zero if a required path is missing. Its `REQUIRED` list is kept in sync with `docs/INVENTORY.md`; run it before every commit. |
+| `scripts/compare_runs.py` | script | Reads two `metrics.csv` files and prints the largest absolute difference in validation loss. Used to confirm that two runs with the same seed produced nearly identical numbers; the expected value is exactly zero on CPU and a value in the fifth or sixth decimal on GPU. |
+| `scripts/hello_pipeline.py` | script | Prints shape, spacing and dtype of a synthetic volume. Imports `make_volume` from `femuralabs.toolkit.volume_info`; it does not define the function itself. Run with `PYTHONPATH=src` outside the container, and with no prefix inside the container because the image sets `PYTHONPATH=/app/src`. |
+| `scripts/train_small_cnn.py` | script | Trains `SmallCNN` on MNIST for a given number of epochs and a given seed, saving per-run configuration, metrics and best checkpoint under `runs/<name>/`, and a learning-curve PNG under `reports/`. Every step is a call into `femuralabs.toolkit.train_utils` or `femuralabs.toolkit.model`. |
+| `src/femuralabs/__init__.py` | module | Package marker. Empty. |
+| `src/femuralabs/toolkit/__init__.py` | module | Package marker. Empty. |
+| `src/femuralabs/toolkit/arrays.py` | module | NumPy array helpers. `zscore_batch` normalises each volume in a `(B, Z, Y, X)` batch to mean zero and standard deviation one. `window_to_uint8` maps Hounsfield units to 0–255 through a linear window for display only. `conv2d` is a slow reference convolution with stride and padding, kept because it is easy to check by hand against `tests/test_arrays.py`. |
+| `src/femuralabs/toolkit/model.py` | module | `SmallCNN`: two convolution blocks with max-pooling and a single linear layer, for 28×28 grayscale images with ten classes. Exactly 9098 trainable parameters, checked by `train_utils.count_parameters`. |
+| `src/femuralabs/toolkit/summary.py` | module | Reads a `.npy` array and reports shape, dtype, min, max and mean. Exposed both as functions (`summarise`, `load_and_summarise`) and as a command line (`python -m femuralabs.toolkit.summary path.npy`). Rejects non-`.npy` suffixes and missing files with a one-line message rather than a traceback, so the tool can be chained in scripts. |
+| `src/femuralabs/toolkit/train_utils.py` | module | Training utilities. `set_seed` seeds Python, NumPy and PyTorch (including every CUDA device) and disables cuDNN benchmark mode so results are reproducible. `get_device`, `count_parameters`, `save_checkpoint`, `load_checkpoint`, `append_row`, `save_config`, `read_metrics`, `plot_curves`, `max_abs_diff`, `train_one_epoch`, `evaluate_with_accuracy` complete the set. Every function returns a value; nothing prints. |
+| `src/femuralabs/toolkit/volume_info.py` | module | `make_volume` returns a zero `float32` array of shape `(z, y, x)` and its spacing in millimetres. `describe` returns shape, spacing, dtype, and the physical extent in millimetres (voxels × spacing). Both are pure functions with defaults that match the small synthetic volume used by `scripts/hello_pipeline.py`. |
+| `tests/test_arrays.py` | test | Verifies `zscore_batch`, `window_to_uint8` and `conv2d` against hand-computed values, including a fully hand-worked 5×5 convolution on a fixed input. |
+| `tests/test_train_utils.py` | test | Verifies that two calls to `set_seed` followed by a random draw produce identical tensors, and that a checkpoint written by `save_checkpoint` round-trips through `load_checkpoint` with weights preserved. |

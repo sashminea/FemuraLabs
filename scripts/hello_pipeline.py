@@ -1,10 +1,11 @@
+"""Print the shape and spacing of a synthetic volume."""
+
 import numpy as np
+from femuralabs.toolkit.volume_info import make_volume
 
-def make_volume(shape=(4, 6, 6), spacing=(2.0, 1.0, 1.0)):
-	volume = np.zeros(shape, dtype=np.float32)
-	return volume, spacing
 
-volume, spacing = make_volume()
-print("shape (z, y,x):", volume.shape)
-print("spacing (mm):", spacing)
-print("dtype:", volume.dtype)
+if __name__ == "__main__":
+	volume, spacing = make_volume()
+	print("shape (z, y, x):", volume.shape)
+	print("spacing (mm):", spacing)
+	print("dtype:", volume.dtype)

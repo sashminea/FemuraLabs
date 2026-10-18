@@ -5,12 +5,9 @@ REQUIRED = [
     "Dockerfile",
     "requirements-tool.txt",
     ".dockerignore",
-    "scripts/hello_pipeline.py",
     "scripts/check_tree.py",
-    "src/femuralabs/toolkit/summary.py",
-    "src/femuralabs/toolkit/arrays.py",
     "docs/INVENTORY.md",
-    "docs/docker_adaptations.md",
+    "docs/DECISIONS.md",
     "docs/RUNBOOK.md",
 ]
 

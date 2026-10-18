@@ -5,5 +5,9 @@ __pycache__
 data/
 runs/
 reports/
+notebooks/
+docs/
+tests/
 *.nii.gz
+*.ipynb
 .env
