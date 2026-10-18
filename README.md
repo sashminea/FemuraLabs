@@ -131,7 +131,7 @@ Expected: `max difference in val_loss` of `0.00e+00` on CPU, or a value
 in the fifth or sixth decimal on GPU (floating-point addition order
 differs between CUDA kernels). A difference in the first decimal means
 a random source is not seeded.
-=======
+
 
 ## Layout
 
