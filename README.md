@@ -79,6 +79,7 @@ max: 5.00
 mean: 2.50
 ```
 
+<<<<<<< HEAD
 ### Train the small CNN
 
 The training script downloads MNIST into `data/` on first run. Each run
@@ -110,6 +111,26 @@ Expected: `max difference in val_loss` of `0.00e+00` on CPU, or a value
 in the fifth or sixth decimal on GPU (floating-point addition order
 differs between CUDA kernels). A difference in the first decimal means
 a random source is not seeded.
+=======
+### Run the hello script in a container
+
+The tool image needs NumPy only, so it uses `requirements-tool.txt`
+
+rather than the training requirements.
+```
+    docker build -t toolkit-hello .
+    docker run --rm toolkit-hello
+```
+Expected output:
+```
+    shape (z, y, x): (4, 6, 6)
+    spacing (mm): (2.0, 1.0, 1.0)
+    dtype: float32
+```
+
+
+
+>>>>>>> 2423c20 (Update README.md)
 
 ## Layout
 
