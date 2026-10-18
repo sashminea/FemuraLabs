@@ -20,16 +20,6 @@ mechanical axes and alignment angles.
 
 Right now it contains two pieces of foundation:
 
-**Array toolkit.** A tested set of helpers for holding images in NumPy
-arrays: a `.npy` summary command-line tool, per-volume z-score
-normalisation, a linear Hounsfield unit intensity window, and a slow
-reference 2D convolution that matches a hand-worked Sobel result.
-
-**Training pipeline.** A small convolutional network and a complete
-PyTorch training loop with seeded randomness, per-epoch CSV logging,
-best-checkpoint saving by validation loss, and plotted learning curves.
-Two runs with the same seed produce nearly identical numbers.
-Right now it contains two pieces of foundation:
 
 **Array toolkit.** A tested set of helpers for holding images in NumPy
 arrays: a `.npy` summary command-line tool, per-volume z-score
@@ -61,15 +51,6 @@ with no NVIDIA GPU, replace the torch line in `requirements.txt` with the
 CPU build from https://pytorch.org/get-started/locally and reinstall.
 The training script selects the device automatically.
 
-### Run the tests
-
-```bash
-```
-
-`torch` is installed from the CUDA wheel index by default. On a machine
-with no NVIDIA GPU, replace the torch line in `requirements.txt` with the
-CPU build from https://pytorch.org/get-started/locally and reinstall.
-The training script selects the device automatically.
 
 ### Run the tests
 
@@ -119,7 +100,6 @@ max: 5.00
 mean: 2.50
 ```
 
-<<<<<<< HEAD
 ### Train the small CNN
 
 The training script downloads MNIST into `data/` on first run. Each run
@@ -151,26 +131,8 @@ Expected: `max difference in val_loss` of `0.00e+00` on CPU, or a value
 in the fifth or sixth decimal on GPU (floating-point addition order
 differs between CUDA kernels). A difference in the first decimal means
 a random source is not seeded.
+
 =======
-### Run the hello script in a container
-
-The tool image needs NumPy only, so it uses `requirements-tool.txt`
-
-rather than the training requirements.
-```
-    docker build -t toolkit-hello .
-    docker run --rm toolkit-hello
-```
-Expected output:
-```
-    shape (z, y, x): (4, 6, 6)
-    spacing (mm): (2.0, 1.0, 1.0)
-    dtype: float32
-```
-
-
-
->>>>>>> 2423c20 (Update README.md)
 
 ## Layout
 
