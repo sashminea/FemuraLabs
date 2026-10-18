@@ -1,0 +1,9 @@
+.git
+.venv
+__pycache__
+*.pyc
+data/
+runs/
+reports/
+*.nii.gz
+.env
