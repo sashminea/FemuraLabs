@@ -8,4 +8,3 @@ volume, spacing = make_volume()
 print("shape (z, y,x):", volume.shape)
 print("spacing (mm):", spacing)
 print("dtype:", volume.dtype)
-
