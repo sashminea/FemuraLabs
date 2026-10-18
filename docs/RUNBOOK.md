@@ -149,6 +149,36 @@ git, and the local cache masked the problem — exactly the failure the clean
 checkout is designed to catch.
 
 
+## Running the geometry service
+
+Starts a small HTTP service that answers two JSON routes. No Docker needed.
+
+    PYTHONPATH=src python -m femuralabs.toolkit.serve
+    # prints: serving on 0.0.0.0:8000
+
+In a second terminal:
+
+    curl http://localhost:8000/health
+    curl http://localhost:8000/info
+    curl -i http://localhost:8000/missing
+
+Expected:
+
+    {"status": "ok"}
+    {"shape": [4, 6, 6], "spacing": [2.0, 1.0, 1.0], "dtype": "float32", "extent_mm": [8.0, 6.0, 6.0]}
+    HTTP/1.0 404 Not Found
+    {"error": "not found"}
+
+Stop the server with `Ctrl+C`. The bind address must be `0.0.0.0`: if it is
+`127.0.0.1`, `curl` on the workstation hangs or is refused, because the
+server is listening only on its own loopback, not the network interface the
+host reaches.
+
+Without `curl`, the demo script does the same three requests against a random
+free port:
+
+    PYTHONPATH=src python scripts/api_demo.py
+
 ## Adding a new stage
 
 When a new command has been run successfully on the workstation and its

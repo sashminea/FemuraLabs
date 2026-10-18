@@ -7,6 +7,42 @@ entry before changing the behaviour it describes.
 Entries are numbered; new ones go at the top. Every entry has the same four
 parts: **Decision**, **Alternative rejected**, **Reason**, **Consequence**.
 
+## D008: module named `serve.py`, not `server.py`
+
+**Decision:** The HTTP entry point is `src/femuralabs/toolkit/serve.py`, and
+the container starts it with `python -m femuralabs.toolkit.serve`.
+
+**Alternative rejected:** `server.py`, matching the verb-vs-noun preference for
+nouns.
+
+**Reason:** Naming is arbitrary, but consistency is not: the file on disk, the
+`python -m` argument, the `RUNBOOK.md` command and the `Dockerfile`'s `CMD`
+must all say the same word. `serve.py` is chosen because it describes the
+action the module performs when executed (`serve` on a port); `server.py`
+describes what the module is (a noun), which reads more naturally for a
+long-running process but is longer by one character and less specific.
+
+**Consequence:** Every reference uses `serve`. If the module is renamed, all
+four places (`git mv`, runbook, Dockerfile, tests) must change in one commit.
+
+
+## D007: `Content-Type: application/json` on the service
+
+**Decision:** The HTTP handler sets `Content-Type: application/json` on every
+reply, including the 404.
+
+**Alternative rejected:** `Content-Type: text/plain` (as shown in some
+references), or omitting the header entirely.
+
+**Reason:** The body is JSON. `application/json` tells clients to parse it as
+JSON; `text/plain` tells them to treat it as raw text; omitting the header
+leaves the client to guess. `curl` happens to guess right either way, but a
+browser and most HTTP clients do not — some refuse JSON parsing on
+`text/plain`. The header is one line and the cost of being right is zero.
+
+**Consequence:** A client that expects `text/plain` (none exists today) would
+need to change. Any future service endpoint that returns non-JSON must set a
+different `Content-Type` explicitly.
 
 ## D006: tracked `runs/`, `reports/` and `notebooks/` files
 
