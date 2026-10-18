@@ -29,6 +29,17 @@ reference 2D convolution that matches a hand-worked Sobel result.
 PyTorch training loop with seeded randomness, per-epoch CSV logging,
 best-checkpoint saving by validation loss, and plotted learning curves.
 Two runs with the same seed produce nearly identical numbers.
+Right now it contains two pieces of foundation:
+
+**Array toolkit.** A tested set of helpers for holding images in NumPy
+arrays: a `.npy` summary command-line tool, per-volume z-score
+normalisation, a linear Hounsfield unit intensity window, and a slow
+reference 2D convolution that matches a hand-worked Sobel result.
+
+**Training pipeline.** A small convolutional network and a complete
+PyTorch training loop with seeded randomness, per-epoch CSV logging,
+best-checkpoint saving by validation loss, and plotted learning curves.
+Two runs with the same seed produce nearly identical numbers.
 
 ## Quick start
 
@@ -41,7 +52,18 @@ source .venv/bin/activate          # WSL/Linux
 # OR: .venv\Scripts\Activate.ps1    # Windows PowerShell
 
 python -m pip install --upgrade pip
+python -m pip install --upgrade pip
 pip install -r requirements.txt
+```
+
+`torch` is installed from the CUDA wheel index by default. On a machine
+with no NVIDIA GPU, replace the torch line in `requirements.txt` with the
+CPU build from https://pytorch.org/get-started/locally and reinstall.
+The training script selects the device automatically.
+
+### Run the tests
+
+```bash
 ```
 
 `torch` is installed from the CUDA wheel index by default. On a machine
@@ -58,6 +80,24 @@ pytest -q
 Expected: all tests pass. This covers the array helpers (z-score,
 window, convolution) and the training utilities (seeding, checkpoint
 round trip).
+
+### Run the hello script in a container
+
+The tool image needs NumPy only, so it uses `requirements-tool.txt`
+rather than the training requirements.
+```
+    docker build -t toolkit-hello .
+    docker run --rm toolkit-hello
+```
+
+
+Expected output:
+```
+    shape (z, y, x): (4, 6, 6)
+    spacing (mm): (2.0, 1.0, 1.0)
+    dtype: float32
+```
+
 
 ### Summarise a saved array
 
@@ -153,6 +193,23 @@ femuralabs/
 ├── runs/                       # per-run config, metrics, checkpoint (ignored)
 ├── reports/                    # saved figures
 ├── docs/                       # logs, notes, conventions
+├── conftest.py                 # makes src/ importable during tests
+├── src/femuralabs/
+│   └── toolkit/
+│       ├── arrays.py           # zscore_batch, window_to_uint8, conv2d
+│       ├── model.py            # SmallCNN (9098 parameters)
+│       ├── summary.py          # command-line .npy summary tool
+│       └── train_utils.py      # seeding, device, checkpoints, logging, curves
+├── scripts/
+│   ├── train_small_cnn.py      # training entry point
+│   ├── compare_runs.py         # compare two runs' metrics
+│   └── scratch_*.py            # exploration only
+├── tests/                      # pytest suite
+├── notebooks/                  # exploration only
+├── data/                       # local data, never committed
+├── runs/                       # per-run config, metrics, checkpoint (ignored)
+├── reports/                    # saved figures
+├── docs/                       # logs, notes, conventions
 └── requirements.txt
 ```
 
@@ -167,4 +224,3 @@ femuralabs/
 - A repeated run with the same seed and different run name should produce
   nearly identical validation losses. `scripts/compare_runs.py` reports
   the largest gap.
-
