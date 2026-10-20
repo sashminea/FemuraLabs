@@ -157,7 +157,7 @@ def main() -> int:
     p.add_argument("--description", required=True,
                    help="2–4 sentences stating what the diagram shows")
     p.add_argument("--spec", default="-", help='JSON spec path, or "-" for stdin')
-    p.add_argument("--out-dir", type=Path, default=Path("docs/flow"))
+    p.add_argument("--out-dir", type=Path, default=Path("flow"))
     p.add_argument("--flow-md", type=Path, default=Path("docs/FLOW.md"))
     a = p.parse_args()
 
