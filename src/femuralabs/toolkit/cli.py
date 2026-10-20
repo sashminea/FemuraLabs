@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from femuralabs.toolkit.volume_info import describe, make_volume
+from femuralabs.toolkit.report import write_info
 
 LABELS = {
 
@@ -39,6 +40,12 @@ def build_parser() -> argparse.ArgumentParser:
 		default=(2.0, 1.0, 1.0),
 		help="physical size of one voxel in mm along (z, y, x); used with either input",
 	)
+	parser.add_argument(
+		"--out",
+		type=Path,
+		default=None,
+		help="folder that receives info.json; omit to skip writing",
+	)
 	return parser
 
 def main(argv=None) -> int:
@@ -51,6 +58,9 @@ def main(argv=None) -> int:
 	info = describe(volume, tuple(args.spacing))
 	for key, label in LABELS.items():
 		print(f"{label}: {info[key]}")
+	if args.out is not None:
+		path = write_info(info, args.out)
+		print(f"wrote: {path}")
 	return 0
 
 if __name__ == "__main__":

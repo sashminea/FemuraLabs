@@ -10,6 +10,8 @@ from pathlib import Path
 import numpy as np
 import torch
 
+from femuralabs.toolkit.io import save_json
+
 def set_seed(seed: int) -> None:
 	"""Seed every random number generator used in training."""
 	random.seed(seed)
@@ -77,8 +79,7 @@ def append_row(path: Path, row: dict) -> None:
 
 def save_config(path: Path, config: dict) -> None:
 	"""Store the settings of a run as readable JSON."""
-	path.parent.mkdir(parents=True, exist_ok=True)
-	path.write_text(json.dumps(config, indent=2))
+	save_json(path, config, indent=2)
 
 def read_metrics(path: Path) -> dict:
 	"""Read a metrics CSV into a dict mapping each column to a list of floats."""
