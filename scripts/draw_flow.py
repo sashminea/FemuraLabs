@@ -1,4 +1,4 @@
-"""Render a flow diagram to docs/flow/ and prepend a section to docs/FLOW.md.
+"""Render a flow diagram to flow/ and prepend a section to docs/FLOW.md.
 
 Host-only tool: it needs matplotlib, which the tool container does not install.
 It is not run inside the image and its output is committed, not generated at
@@ -13,6 +13,8 @@ Run as:
 Node kinds map to colours: module (blue), script (green), cli (yellow), file
 (white, dashed border), external (grey). Every node may carry `col` and `row`
 to override automatic layout.
+
+Example of an img src element at docs/FLOW.md:  <img src="flow/write-info-out-flag.png" alt="write_info and the --out flag">
 """
 from __future__ import annotations
 

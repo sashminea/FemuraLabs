@@ -26,7 +26,7 @@ white-dashed = file on disk, grey = external.
 
 ## write_info and the --out flag
 
-<img src="docs/flow/write-info-out-flag.png" alt="write_info and the --out flag">
+<img src="flow/write-info-out-flag.png" alt="write_info and the --out flag">
 
 The geometry CLI branches on --file (load a .npy) and on --out (write info.json). The writer lives in report.py and delegates the actual write to io.save_json, which is also what training/train_utils.save_config uses. One JSON writer, two public faces; the CLI never touches the file system directly.
 
