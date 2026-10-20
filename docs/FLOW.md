@@ -29,7 +29,7 @@ white-dashed = file on disk, grey = external.
 
 ## Compose: api and web on one network
 
-<img src="docs/flow/compose-two-services.png" alt="Compose: api and web on one network">
+<img src="flow/compose-two-services.png" alt="Compose: api and web on one network">
 
 docker compose up --build -d starts two containers on the project's private
 network. curl reaches the api on host port 8000; a browser reaches the web
@@ -44,7 +44,7 @@ network; the two bind-mounted folders survive on the host.
 
 ## Mounts: read-only data in, writable output out
 
-<img src="docs/flow/mounts-readonly-data-writable-output.png" alt="Mounts: read-only data in, writable output out">
+<img src="flow/mounts-readonly-data-writable-output.png" alt="Mounts: read-only data in, writable output out">
 
 Two host folders are mounted into the container: data/ read-only at /data,
 and output/ writable at /output. The CLI reads /data/volume.npy, calls
@@ -56,7 +56,7 @@ is the host file output/info.json. The image holds neither folder.
 
 ## write_info and the --out flag
 
-<img src="docs/flow/write-info-out-flag.png" alt="write_info and the --out flag">
+<img src="flow/write-info-out-flag.png" alt="write_info and the --out flag">
 
 The geometry CLI branches on --file (load a .npy) and on --out (write
 info.json). The writer lives in report.py and delegates the actual write to

@@ -328,41 +328,43 @@ Without `REPORT_FOLDER`, or when the folder does not hold `info.json`,
 `/info` falls back to the four-key geometry dictionary. Both cases exit 200
 and both are covered by `tests/test_routes.py`.
 
+
 ## Recording a flow diagram
 
 Each change that alters the module flow gets a diagram in `docs/FLOW.md`.
 The section is prepended above the marker `<!-- INSERT HERE -->`; old
 sections are never edited or removed. The command is the same every time —
-only `--id`, `--title`, `--description` and the JSON spec change:
+only `--slug`, `--title`, `--description` and the JSON spec change:
 
     python scripts/draw_flow.py \
-      --slug write-info-out-flag \
-      --title "write_info and the --out flag" \
-      --description "..." \
+      --slug <short-semantic-slug> \
+      --title "<human-readable heading>" \
+      --description "<2-4 sentences>" \
       --spec - <<'EOF'
     {
-      "nodes": [
-        {"id": "cli",  "label": "cli.main(argv)",        "kind": "cli"},
-        {"id": "save", "label": "save_json(path, data)", "kind": "module"},
-        {"id": "info", "label": "output/info.json",      "kind": "file"}
-      ],
-      "edges": [
-        {"from": "cli",  "to": "save", "label": "if --out"},
-        {"from": "save", "to": "info", "label": "writes"}
-      ]
+      "nodes": [ ... ],
+      "edges": [ ... ]
     }
     EOF
 
-Expected: two printed lines, `wrote docs/flow/write-info-out-flag.png`
-& `prepended section 'write-info-out-flag' to docs/FLOW.md` then the new section at the top of `docs/FLOW.md` and the PNG in `docs/flow/`.
+Expected: two printed lines, `wrote docs/flow/<slug>.png` and
+`prepended section '<slug>' to docs/FLOW.md`. Open `docs/FLOW.md` and
+confirm the new section is at the top, above any older section, with
+the `<img src="flow/<slug>.png" ...>` attribute **relative to `docs/`**
+(the file lives at `docs/FLOW.md`, so `flow/...` resolves to
+`docs/flow/...`; writing `docs/flow/...` would look for
+`docs/docs/flow/...` and render a broken link on GitHub).
 
-Node kinds map to colours: `module` (blue), `script` (green), `cli` (yellow),
-`file` (white-dashed), `external` (grey). Every node may carry `col` and `row`
-to override the automatic BFS layout.
+`--slug` values are semantic (`write-info-out-flag`,
+`mounts-readonly-data-writable-output`), never a chapter, block, session
+or date reference. Node kinds map to colours: `module` (blue),
+`script` (green), `cli` (yellow), `file` (white-dashed), `external` (grey).
+Every node may carry `col` and `row` to override the automatic BFS layout.
 
-Re-running with an existing --slug exits non-zero with A diagram with slug <slug> already exists. That is a guard against double-
-prepending; delete the section from `FLOW.md` (or pick a new `--id`) if a
-regeneration is intentional.
+Re-running with an existing `--slug` exits non-zero with
+`A diagram with slug <slug> already exists`. That is a guard against
+double-prepending; if a regeneration is intentional, delete the section
+from `FLOW.md`, delete the PNG, and re-run.
 
 The script is host-only and never runs inside the container.
 
