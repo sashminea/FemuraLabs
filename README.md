@@ -16,7 +16,7 @@ mechanical axes and alignment angles.
 - Simulate a simple osteotomy wedge
 - Produce a validation report with all measurements
 
-Right now it contains two pieces of foundation:
+Right now it contains three pieces of foundation:
 
 **Array toolkit.** A tested set of helpers for holding images in NumPy
 arrays: a `.npy` summary command-line tool, per-volume z-score
