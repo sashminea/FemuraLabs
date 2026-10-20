@@ -6,8 +6,6 @@ mechanical axes and alignment angles.
 
 <img width="2873" height="852" alt="FemuraLabs Banner" src="https://github.com/user-attachments/assets/41d18b7f-2fb5-4f52-b184-500358c6faa7" />
 
-
-
 ## What it does (eventually)
 
 - Read and preprocess DICOM and NIfTI volumes with correct geometry
@@ -20,178 +18,93 @@ mechanical axes and alignment angles.
 
 Right now it contains two pieces of foundation:
 
-
 **Array toolkit.** A tested set of helpers for holding images in NumPy
 arrays: a `.npy` summary command-line tool, per-volume z-score
 normalisation, a linear Hounsfield unit intensity window, and a slow
-reference 2D convolution that matches a hand-worked Sobel result.
+reference 2D convolution that matches a hand-worked Sobel result. 
 
-**Training pipeline.** A small convolutional network and a complete
+**Training pipeline.** — A small convolutional network and a complete
 PyTorch training loop with seeded randomness, per-epoch CSV logging,
 best-checkpoint saving by validation loss, and plotted learning curves.
 Two runs with the same seed produce nearly identical numbers.
 
+**Container and service** — a `Dockerfile` that runs the geometry tool as a non-root user on CPU only, and a `docker-compose.yml` that starts an HTTP service and a static page together on one private network. Data is mounted read-only, results are mounted writable, the image holds neither folder.
+
+
 ## Quick start
 
-```bash
-git clone git@github.com:sashminea/FemuraLabs.git
-cd FemuraLabs
+    git clone git@github.com:sashminea/FemuraLabs.git
+    cd FemuraLabs
 
-python3 -m venv .venv
-source .venv/bin/activate          # WSL/Linux
-# OR: .venv\Scripts\Activate.ps1    # Windows PowerShell
+    python3 -m venv .venv
+    source .venv/bin/activate          # WSL/Linux
+    # OR: .venv\Scripts\Activate.ps1    # Windows PowerShell
 
-python -m pip install --upgrade pip
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
 
-`torch` is installed from the CUDA wheel index by default. On a machine
-with no NVIDIA GPU, replace the torch line in `requirements.txt` with the
-CPU build from https://pytorch.org/get-started/locally and reinstall.
-The training script selects the device automatically.
+`torch` installs from the CUDA wheel index by default. On a machine with
+no NVIDIA GPU, replace the torch line in `requirements.txt` with the CPU
+build from https://pytorch.org/get-started/locally and reinstall.
 
+### The three things to try first
 
-### Run the tests
+    # 1. Tests — 16 pass, covering arrays, training utils, routes, CLI, report
+    pytest -q
 
-```bash
-pytest -q
-```
+    # 2. The tool in a container — prints a synthetic volume's geometry
+    docker build -t toolkit-hello . && docker run --rm toolkit-hello
 
-Expected: all tests pass. This covers the array helpers (z-score,
-window, convolution) and the training utilities (seeding, checkpoint
-round trip).
+    # 3. Both services on one network — api on :8000, web on :8080
+    docker compose up --build -d
+    curl http://localhost:8000/health
+    docker compose down
 
-### Run the tool in a container
-
-The tool image installs NumPy only, runs as the non-root account `student`,
-and starts the command-line geometry tool by default.
-
-    docker build -t toolkit-hello .
-    docker run --rm toolkit-hello
-
-Expected:
-
-    shape (z, y, x): (4, 6, 6)
-    spacing (mm): (2.0, 1.0, 1.0)
-    dtype: float32
-    extent (mm): (8.0, 6.0, 6.0)
-
-Any command after the image name replaces the default entirely:
-
-    docker run --rm toolkit-hello python -m femuralabs.toolkit.cli --shape 3 5 5 --spacing 1.5 1.5 1.5
-    docker run --rm toolkit-hello id
-    docker run --rm -p 8000:8000 toolkit-hello python -m femuralabs.toolkit.service.serve
-
-The third command starts the HTTP service. `-p 8000:8000` (host:container)
-publishes the container's port 8000 on the workstation's port 8000, so
-`curl http://localhost:8000/health` on the workstation answers
-`{"status": "ok"}`. The image sets `EXPOSE 8000` as documentation; the
-`-p` flag is what actually forwards.
-
-
-### Summarise a saved array
-
-Create a small `.npy` file to test with:
-
-```bash
-mkdir -p data
-python -c "import numpy as np; np.save('data/small.npy', np.arange(6, dtype=np.float32).reshape(2, 3))"
-PYTHONPATH=src python -m femuralabs.toolkit.summary data/small.npy
-```
-
-Expected output:
-
-```
-shape: (2, 3)
-dtype: float32
-min: 0.00
-max: 5.00
-mean: 2.50
-```
-
-### Train the small CNN
-
-The training script downloads MNIST into `data/` on first run. Each run
-gets its own folder under `runs/`, containing `config.json`,
-`metrics.csv`, and `best.pt` (the best checkpoint by validation loss).
-The learning curves are written to `reports/`.
-
-```bash
-PYTHONPATH=src python scripts/train_small_cnn.py \
-    --seed 0 --epochs 5 --run-name run_a
-```
-
-Expected output: one line per epoch with training loss, validation loss,
-and accuracy, then a PNG in `reports/run_a_curves.png`.
-
-### Verify reproducibility
-
-Run the same command again under a different run name and compare:
-
-```bash
-PYTHONPATH=src python scripts/train_small_cnn.py \
-    --seed 0 --epochs 5 --run-name run_b
-
-PYTHONPATH=src python scripts/compare_runs.py \
-    runs/run_a/metrics.csv runs/run_b/metrics.csv
-```
-
-Expected: `max difference in val_loss` of `0.00e+00` on CPU, or a value
-in the fifth or sixth decimal on GPU (floating-point addition order
-differs between CUDA kernels). A difference in the first decimal means
-a random source is not seeded.
-
+The full list of commands — mounting data in and results out, summarising
+a saved `.npy`, training the small CNN, comparing two runs — is in
+`docs/RUNBOOK.md`, with expected output and failure modes.
 
 ## Layout
 
-```
-femuralabs/
-├── conftest.py                 # makes src/ importable during tests
-├── src/femuralabs/
-│   └── toolkit/
-│       ├── arrays.py           # zscore_batch, window_to_uint8, conv2d
-│       ├── model.py            # SmallCNN (9098 parameters)
-│       ├── summary.py          # command-line .npy summary tool
-│       └── train_utils.py      # seeding, device, checkpoints, logging, curves
-├── scripts/
-│   ├── train_small_cnn.py      # training entry point
-│   ├── compare_runs.py         # compare two runs' metrics
-│   └── scratch_*.py            # exploration only
-├── tests/                      # pytest suite
-├── notebooks/                  # exploration only
-├── data/                       # local data, never committed
-├── runs/                       # per-run config, metrics, checkpoint (ignored)
-├── reports/                    # saved figures
-├── docs/                       # logs, notes, conventions
-├── conftest.py                 # makes src/ importable during tests
-├── src/femuralabs/
-│   └── toolkit/
-│       ├── arrays.py           # zscore_batch, window_to_uint8, conv2d
-│       ├── model.py            # SmallCNN (9098 parameters)
-│       ├── summary.py          # command-line .npy summary tool
-│       └── train_utils.py      # seeding, device, checkpoints, logging, curves
-├── scripts/
-│   ├── train_small_cnn.py      # training entry point
-│   ├── compare_runs.py         # compare two runs' metrics
-│   └── scratch_*.py            # exploration only
-├── tests/                      # pytest suite
-├── notebooks/                  # exploration only
-├── data/                       # local data, never committed
-├── runs/                       # per-run config, metrics, checkpoint (ignored)
-├── reports/                    # saved figures
-├── docs/                       # logs, notes, conventions
-└── requirements.txt
-```
+    src/femuralabs/toolkit/
+      arrays.py     summary.py     volume_info.py
+      cli.py        io.py          report.py
+      training/     model.py       train_utils.py
+      service/      routes.py      api.py      serve.py
+
+    scripts/        run-by-hand entry points:
+                    hello_pipeline.py, train_small_cnn.py, compare_runs.py,
+                    api_demo.py, check_tree.py, clean_check.sh, draw_flow.py
+    tests/          pytest suite (16 tests across 5 files)
+    web/            static page served by the `web` service
+    docs/           INVENTORY, DECISIONS, RUNBOOK, FLOW, flow/ (PNG diagrams)
+    AGENTS.md       working protocol and constraints for agents and contributors
+
+    Dockerfile                tool image (numpy only, non-root student)
+    docker-compose.yml        api + web on one private network
+    requirements.txt          dev env (torch, numpy, matplotlib, pytest)
+    requirements-tool.txt     tool image only (numpy, pinned)
+    data/, output/, runs/     not committed
+
+## Documentation
+
+Maintainer detail lives in `docs/`:
+
+- `docs/RUNBOOK.md` — every command that has been run, with expected output
+  and failure modes.
+- `docs/DECISIONS.md` — every design choice, with the alternative that was
+  rejected and why.
+- `docs/INVENTORY.md` — every tracked path, one row per file.
+- `docs/FLOW.md` — annotated call graphs, cumulative.
+- `AGENTS.md` — working protocol, constraints, documentation rules.
 
 ## Reproducibility
 
-- Seeds are fixed for Python, NumPy, and PyTorch, including CUDA.
-- The train/validation split uses a seeded generator, so it is identical
-  on every run.
-- Every run folder stores its command-line settings in `config.json`,
-  its per-epoch numbers in `metrics.csv`, and the best checkpoint in
-  `best.pt`.
-- A repeated run with the same seed and different run name should produce
-  nearly identical validation losses. `scripts/compare_runs.py` reports
-  the largest gap.
+Seeds are fixed for Python, NumPy and PyTorch, including CUDA. The
+train/validation split uses a seeded generator, so it is identical on
+every run. Every run writes `config.json`, `metrics.csv` and the best
+checkpoint into its own folder under `runs/`. Repeating a run with the
+same seed produces a validation loss that differs by `0.00e+00` on CPU
+(and by a value in the fifth or sixth decimal on GPU, where floating
+point addition order differs between kernels). `scripts/compare_runs.py`
+reports the largest gap.
