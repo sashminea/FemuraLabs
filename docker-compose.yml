@@ -1,0 +1,25 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: toolkit-hello
+    command: python -m femuralabs.toolkit.service.serve
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./output:/output:ro
+    environment:
+      REPORT_FOLDER: /output
+      PORT: "8000"
+
+  web:
+    image: python:3.12-slim
+    user: "1000:1000"
+    command: python -m http.server 8080 --directory /web
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./web:/web:ro
+    depends_on:
+      - api

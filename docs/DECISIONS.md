@@ -1,11 +1,53 @@
 # Design decisions
 
 Every choice in this repository that could reasonably have been made
-differently, with the alternative that was rejected and the reason. Read an
-entry before changing the behaviour it describes.
+differently, with the alternative that was rejected and the reason. Read an entry before changing the behaviour it describes.
 
 Entries are numbered; new ones go at the top. Every entry has the same four
 parts: **Decision**, **Alternative rejected**, **Reason**, **Consequence**.
+
+## D021: two Compose services — `api` (built) and `web` (public image)
+
+**Decision:** `docker-compose.yml` defines two services. `api` is built from
+the project's Dockerfile, starts `femuralabs.toolkit.service.serve`, publishes
+port 8000, and mounts `./output:/output:ro` with `REPORT_FOLDER=/output`.
+`web` uses the public `python:3.12-slim` image, runs
+`python -m http.server 8080 --directory /web`, publishes port 8080, mounts
+`./web:/web:ro`, and depends on `api` only for start order.
+
+**Alternative rejected:** (a) One service for both — a single image with two
+processes under a supervisor. (b) A second build for `web`, even though it
+only serves static files. (c) Add a `trainer` service as a placeholder.
+
+**Reason:** (a) mixes two responsibilities in one container and forces the
+whole system to share one process tree; if one crashes, both do. Container
+separation is the whole point. (b) serves nothing that the public
+`python:3.12-slim` image does not already provide — a standard-library static
+file server — and adds a `Dockerfile` that must be maintained for no benefit.
+The image is a dependency, not code we own. (c) is premature: a placeholder
+service without a real container behind it would make `docker compose up`
+raise errors or be silently skipped, and the next block's trainer will need a
+real image and a real output folder before it can be declared here. Not being
+in the file yet is honest.
+
+The `:ro` mount on `api` follows D016: `/output` is where a written report
+already exists; the API reads it, never writes it. `output/` is writable on
+the host by the command-line tool, which is where reports come from.
+
+`depends_on: [api]` is chosen over nothing because Compose otherwise has no
+ordering guarantee — `web` may start before `api`, and a fresh `docker compose
+up` would show `web` up while `api` is still pulling. The ordering does not
+wait for `/health` to answer (`depends_on` is start order, not readiness); a
+future service that needs `api` ready would add a healthcheck and the
+`condition: service_healthy` form, which the current `web` does not need.
+
+**Consequence:** `docker compose up --build -d` is the one command that starts
+the whole system. `docker compose down` stops it. `docker compose ps`, `logs
+SERVICE`, `config` are the diagnostic tools. `docker run toolkit-hello …`
+still works for one-container runs, because `image: toolkit-hello` names the
+built image. `web/` is new and lives at the project root next to `output/`;
+both are bind-mounted, so editing `web/index.html` and refreshing the browser
+picks up the change immediately without a rebuild.
 
 ## D020: `routes.route` extended to read a written report; no `status.py`
 

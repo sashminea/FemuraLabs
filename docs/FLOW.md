@@ -40,4 +40,12 @@ Two host folders are mounted into the container: data/ read-only at /data, and o
 
 ---
 
+## Compose: api and web on one network
+
+<img src="flow/compose-two-services.png" alt="Compose: api and web on one network">
+
+docker compose up --build -d starts two containers on the project's private network. curl reaches the api on host port 8000; a browser reaches the web on host port 8080. The api service reads output/info.json from the :ro mount, which is what /info returns when the file exists. From inside the network, web reaches api by the service name http://api:8000/ and api reaches web by http://web:8080/ — the names only resolve between containers, not from the host. docker compose down removes both containers and the network; the two bind-mounted folders survive on the host.
+
+---
+
 <!-- INSERT HERE -->

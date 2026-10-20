@@ -208,6 +208,82 @@ Failure modes:
 
 `output/` and `data/` are ignored by git.
 
+## Running both services with Compose
+
+Starts the API and the static web page together, on one private network, with
+one command. Both are published on the host, so a browser and `curl` reach
+them by port.
+
+Before the first start:
+
+    mkdir -p web output
+    docker compose config
+
+`config` validates the file and prints it with every default filled in. If
+the output is a YAML parse error naming a line and column, there is a tab or
+a wrong indent — YAML forbids tabs.
+
+Start, inspect, request, stop:
+
+    docker compose up --build -d
+    docker compose ps
+    curl http://localhost:8000/health
+    curl http://localhost:8000/info
+    curl -I http://localhost:8080/
+    docker compose logs api
+    docker compose down
+
+Expected:
+
+- `up` creates the network `femuralabs_default` and starts `api` and `web`.
+- `ps` lists both, each with `0.0.0.0:8000->8000/tcp` and
+  `0.0.0.0:8080->8080/tcp`.
+- `curl` on port 8000 `/health` gives `{"status": "ok"}`.
+- `curl` on port 8000 `/info` gives the content of `output/info.json` if it
+  exists, or the four-key geometry dictionary if not.
+- `curl -I` on port 8080 gives `HTTP/1.0 200 OK` and a `Content-type:
+  text/html` header.
+- `logs api` shows `serving on 0.0.0.0:8000`. Per-request lines are silenced
+  by the handler.
+- `down` removes both containers and the network. `output/` and `web/`
+  survive — they are bind mounts on the host.
+
+The `--build` flag rebuilds the `toolkit-hello` image before starting; without
+it, Compose uses the last built image of that name. `-d` runs in the
+background; without it both services' logs stream into the terminal and
+`Ctrl+C` stops them.
+
+Recreate the report if `/info` returns the fallback shape `(4, 6, 6)` rather
+than `(2, 3, 4)` — meaning `output/info.json` is missing:
+
+    PYTHONPATH=src python -m femuralabs.toolkit.cli --shape 2 3 4 --spacing 3 1 1 --out output
+
+`_report_body()` reads the file on every request, so a fresh `curl` picks up
+the new content without restarting the container.
+
+Test the Compose network — services reach each other by name:
+
+    docker compose up -d
+    docker compose exec web python -c "import urllib.request; print(urllib.request.urlopen('http://api:8000/health').read())"
+    docker compose down
+
+Expected: `b'{"status": "ok"}'` — `web` reached `api` by service name, not by
+IP. The service name only resolves on the Compose network; from the
+workstation, use the published ports.
+
+Common failures:
+
+- `no configuration file provided: not found` — the terminal is not in the
+  folder holding `docker-compose.yml`.
+- `port is already allocated` — another program or a leftover project holds
+  8000 or 8080. `docker compose ps` shows leftovers; `docker compose down`
+  removes them. If a different program holds the port, change the host side
+  in `ports:` (for example `"8001:8000"`).
+- `Error response from daemon: pull access denied` — the `web` image pull
+  failed (network issue); `docker pull python:3.12-slim` first.
+- `/info` returns the fallback `(4, 6, 6)` shape — `output/info.json` is
+  missing; see above.
+
 ## Verifying a build from a clean checkout
 
 The build above copies from the working folder, not from git. A file that was

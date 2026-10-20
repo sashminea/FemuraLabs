@@ -12,6 +12,8 @@ REQUIRED = [
     "AGENTS.md",
     "docs/FLOW.md",
     "docs/flow",
+    "docker-compose.yml",
+    "web/index.html",
 ]
 
 
