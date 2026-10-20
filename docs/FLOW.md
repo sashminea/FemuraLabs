@@ -32,4 +32,12 @@ The geometry CLI branches on --file (load a .npy) and on --out (write info.json)
 
 ---
 
+## Mounts: read-only data in, writable output out
+
+<img src="flow/mounts-readonly-data-writable-output.png" alt="Mounts: read-only data in, writable output out">
+
+Two host folders are mounted into the container: data/ read-only at /data, and output/ writable at /output. The CLI reads /data/volume.npy, calls describe and write_info, and save_json writes /output/info.json. Because /output is a bind mount, the file the container sees at /output/info.json is the host file output/info.json. The image holds neither folder.
+
+---
+
 <!-- INSERT HERE -->

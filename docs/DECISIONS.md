@@ -7,6 +7,35 @@ entry before changing the behaviour it describes.
 Entries are numbered; new ones go at the top. Every entry has the same four
 parts: **Decision**, **Alternative rejected**, **Reason**, **Consequence**.
 
+## D016: mounts use `/data` (read-only) and `/output` (writable)
+
+**Decision:** Every container run that reads host data mounts it at `/data`
+with `:ro`; every run that writes host results mounts at `/output` with the
+default writable mode. The image's `WORKDIR` is `/app`, and no mount point
+overlaps anything under it.
+
+**Alternative rejected:** (a) A single `-v "$(pwd):/work"` mount, so
+everything is visible at once. (b) `:rw` for the data mount. (c) Mount points
+inside `/app`, for example `/app/data`.
+
+**Reason:** (a) exposes the entire repository — `.git`, `runs/`, any future
+secrets file — to the container and defeats `.dockerignore`'s purpose. (b)
+lets a bug in the tool modify or delete a scan; the mount should make that
+impossible, not merely discouraged. (c) hides whatever the image holds at
+that path. A folder mounted at `/app/src` makes `femuralabs` (which lives at
+`/app/src/femuralabs`) invisible, and every command fails with `No module
+named 'femuralabs'`. The chosen paths `/data` and `/output` are empty in the
+image, so mounting there removes nothing.
+
+**Consequence:** The two mount flags are typed at every run that reads or
+writes. The CLI's `--file` and `--out` arguments name the container path
+(`/data/volume.npy`, `/output`) — not the host path — because the CLI runs
+inside the container and cannot see the host. The output folder must be
+created **before** the run, as the host user. Docker creates a missing
+bind-mount folder as `root`; the container's `student` (UID 1000) then
+cannot write to it. `mkdir -p output` makes the folder owned by UID 1000,
+matching the container user.
+
 ## D015: cumulative annotated call graphs in `docs/FLOW.md`
 
 **Decision:** `docs/FLOW.md` records one annotated call graph per recorded point in the project's development, at

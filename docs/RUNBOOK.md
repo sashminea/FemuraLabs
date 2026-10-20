@@ -141,6 +141,72 @@ accumulate and `docker ps -a` lists them. `-p 8000:8000` forwards host port
 `port is already allocated`, another program holds 8000 on the workstation —
 publish to `-p 8001:8000` and `curl :8001` instead.
 
+## Mounting data in and results out
+
+The container reads a host folder marked read-only and writes results to a
+second host folder. The image holds neither folder; both live on the host.
+
+Create the input volume by calling the shared `make_volume` — the same
+function used by `hello_pipeline.py` and the CLI's `--shape` path:
+
+    PYTHONPATH=src python -c 'import numpy as np; from femuralabs.toolkit.volume_info import make_volume; v, _ = make_volume((2,3,4), (3.0,1.0,1.0)); np.save("data/volume.npy", v)'
+
+Create the output folder as the host user before the container starts.
+Docker creates a missing bind-mount folder as `root`; a pre-created folder
+belongs to the host user (UID 1000 by default in WSL2), matching the
+container's `student` account:
+
+    mkdir -p output
+    ls -la output                # owner should be your host user
+
+Run with two mounts — data read-only, output writable:
+
+    docker run --rm \
+      -v "$(pwd)/data:/data:ro" \
+      -v "$(pwd)/output:/output" \
+      toolkit-hello \
+      python -m femuralabs.toolkit.cli \
+        --file /data/volume.npy \
+        --spacing 3 1 1 \
+        --out /output
+
+Expected:
+
+    shape (z, y, x): (2, 3, 4)
+    spacing (mm): (3.0, 1.0, 1.0)
+    dtype: float32
+    extent (mm): (6.0, 3.0, 4.0)
+    wrote: /output/info.json
+
+The `wrote:` line names the **container** path. The host file is:
+
+    cat output/info.json
+    ls -la output/               # owner should be your host user, not root
+
+Read-only is enforced — attempting to write into `/data` fails:
+
+    docker run --rm -v "$(pwd)/data:/data:ro" toolkit-hello \
+      python -c "open('/data/test.txt', 'w').write('x')"
+    # OSError: [Errno 30] Read-only file system
+
+A mount hides what the image holds at the mount path:
+
+    docker run --rm -v "$(pwd)/data:/app/src:ro" toolkit-hello \
+      python -m femuralabs.toolkit.cli
+    # No module named 'femuralabs'
+
+Failure modes:
+
+- `No such file or directory: /data/volume.npy` — the host path in the flag
+  was wrong; Docker silently created an empty folder there.
+- `Permission denied` on `/output` — the host folder is owned by root, not
+  UID 1000. `rm -rf output && mkdir -p output` before the run.
+- `Read-only file system` on `/output` — `--out` points into `/data`. Use
+  `/output` (container path) for `--out`.
+- `No module named 'femuralabs'` — a mount overlaps `/app/src` or `/app`,
+  hiding the code. Use `/data` and `/output`.
+
+`output/` and `data/` are ignored by git.
 
 ## Verifying a build from a clean checkout
 

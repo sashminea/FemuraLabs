@@ -225,6 +225,7 @@ These are hard rules. Deviating breaks reproducibility or exposes data.
   logic, the logic must move to `src/` first.
 - That a file in `notebooks/` is authoritative. Notebooks are exploration;
   the modules under `src/` are the definition.
+- That any mount point the image does not expect is safe. Mounts are `/data` (read-only) and `/output` (writable). Mounting over `/app` or `/app/src` hides the code inside the image. See D016 in `DECISIONS.md`.
 
 **Never write:**
 
