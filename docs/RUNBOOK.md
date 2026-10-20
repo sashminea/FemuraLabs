@@ -196,6 +196,45 @@ free port:
 
     PYTHONPATH=src python scripts/api_demo.py
 
+## Recording a flow diagram
+
+Each change that alters the module flow gets a diagram in `docs/FLOW.md`.
+The section is prepended above the marker `<!-- INSERT HERE -->`; old
+sections are never edited or removed. The command is the same every time —
+only `--id`, `--title`, `--description` and the JSON spec change:
+
+    python scripts/draw_flow.py \
+      --slug write-info-out-flag \
+      --title "write_info and the --out flag" \
+      --description "..." \
+      --spec - <<'EOF'
+    {
+      "nodes": [
+        {"id": "cli",  "label": "cli.main(argv)",        "kind": "cli"},
+        {"id": "save", "label": "save_json(path, data)", "kind": "module"},
+        {"id": "info", "label": "output/info.json",      "kind": "file"}
+      ],
+      "edges": [
+        {"from": "cli",  "to": "save", "label": "if --out"},
+        {"from": "save", "to": "info", "label": "writes"}
+      ]
+    }
+    EOF
+
+Expected: two printed lines, `wrote docs/flow/block-4-1.png` and
+`prepended section for block 4.1 to docs/FLOW.md`, then the new section at
+the top of `docs/FLOW.md` and the PNG in `docs/flow/`.
+
+Node kinds map to colours: `module` (blue), `script` (green), `cli` (yellow),
+`file` (white-dashed), `external` (grey). Every node may carry `col` and `row`
+to override the automatic BFS layout.
+
+Re-running with an existing --slug exits non-zero with A diagram with slug <slug> already exists. That is a guard against double-
+prepending; delete the section from `FLOW.md` (or pick a new `--id`) if a
+regeneration is intentional.
+
+The script is host-only and never runs inside the container.
+
 ## Adding a new stage
 
 When a new command has been run successfully on the workstation and its
@@ -229,3 +268,29 @@ Run this before trusting any commit: a file that exists in your working tree
 but was never committed is invisible here. That is the point. The four failure
 modes and their meaning are documented in `docs/INVENTORY.md` under
 `scripts/clean_check.sh`.
+
+## Writing a geometry result to a folder
+
+The `--out` flag writes `info.json` inside the named folder. Uses the
+synthetic-volume path from the CLI section, so no input file is needed:
+
+    PYTHONPATH=src python -m femuralabs.toolkit.cli --shape 2 3 4 --spacing 3 1 1 --out output
+    cat output/info.json
+
+Expected:
+
+    shape (z, y, x): (2, 3, 4)
+    spacing (mm): (3.0, 1.0, 1.0)
+    dtype: float32
+    extent (mm): (6.0, 3.0, 4.0)
+    wrote: output/info.json
+    {"shape": [2, 3, 4], "spacing": [3.0, 1.0, 1.0], "dtype": "float32", "extent_mm": [6.0, 3.0, 4.0]}
+
+The extent 6.0, 3.0, 4.0 is 2×3, 3×1, 4×1 — voxel count times voxel spacing,
+checkable by hand.
+
+Omitting `--out` prints the four lines and writes nothing. The folder is
+created if missing and left unchanged if present.
+
+`output/` and `data/` are both ignored by git; nothing under them is
+committed.

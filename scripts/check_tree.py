@@ -10,6 +10,8 @@ REQUIRED = [
     "docs/DECISIONS.md",
     "docs/RUNBOOK.md",
     "docs/AGENTS.md",
+    "docs/FLOW.md",
+    "docs/flow",
 ]
 
 
