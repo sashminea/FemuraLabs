@@ -104,6 +104,11 @@ running. If `COPY` fails with `file not found`, the missing file is either
 untracked or excluded by `.dockerignore`; check `git status` first and the
 ignore file second.
 
+Verify the ignore file is doing its job by looking at the `transferring context`
+line in the build output — a few tens of kB, not megabytes. If it grows,
+compare `du -sh .venv runs data` against `.dockerignore` and find the
+unmatched entry.
+
 
 ## Running the tool container
 

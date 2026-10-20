@@ -1,15 +1,33 @@
+# Version control
 .git
+.gitignore
+
+# Virtual environment and Python caches
 .venv
-__pycache__
+__pycache__/
 *.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Data and results
 data/
 runs/
 reports/
 notebooks/
+.ipynb_checkpoints/
+*.nii.gz
+*.npy
+*.pt
+*.pth
+
+# Secrets
+.env
+.env.*
+
+# Not needed by the tool container
 docs/
 tests/
-*.nii.gz
-*.ipynb
-.env
-src/femuralabs/toolkit/training
-
+src/femuralabs/toolkit/training/
