@@ -7,6 +7,40 @@ entry before changing the behaviour it describes.
 Entries are numbered; new ones go at the top. Every entry has the same four
 parts: **Decision**, **Alternative rejected**, **Reason**, **Consequence**.
 
+## D020: `routes.route` extended to read a written report; no `status.py`
+
+**Decision:** `service/routes.py` gains a `_report_body()` helper. When the
+`REPORT_FOLDER` environment variable is set and `{REPORT_FOLDER}/info.json`
+exists, `/info` returns that file's JSON. Otherwise it falls back to the
+geometry dictionary it always returned. `api.py`, `serve.py`,
+`scripts/api_demo.py` and the three existing tests in `tests/test_routes.py`
+are unchanged.
+
+**Alternative rejected:** A second module `service/status.py` implementing a
+separate `/health` + `/info` service that reads `/output/info.json`, as one
+alternative design would suggest.
+
+**Reason:** A second service would duplicate every part of the existing one —
+the `/health` branch, the `do_GET` order of `send_response` → `send_header` →
+`end_headers` → `wfile.write`, the `HTTPServer` bootstrap, the `PORT` env var.
+The only genuine difference is that one endpoint serves a file and the other
+computes a dictionary. That is an extra branch inside `route`, not a second
+program. Everything below `route` (the HTTP layer, the process, the port)
+is identical and stays one implementation.
+
+The `REPORT_FOLDER` env var is chosen over a `--folder` CLI flag because the
+Compose file sets env vars on a service without a shell (`environment:`), and
+because it matches how the container already receives `PORT` from
+`serve.py`'s existing `os.environ.get`. Two env vars, one convention.
+
+**Consequence:** The endpoint is more robust than before: it answers `/info`
+whether or not a report has been written. A caller (browser, curl, a future
+viewer) gets either a written report or the computed default, never a 404.
+The `-v ./output:/output:ro` mount on the API service in the Compose file
+gives the container read access to the folder; `environment: REPORT_FOLDER:
+/output` makes it look there. If both are set but the file is missing, the
+fallback runs — a valid state, not an error.
+
 ## D017: writer tests use `tmp_path`, never `output/`
 
 **Decision:** `tests/test_report.py` uses pytest's `tmp_path` fixture for the

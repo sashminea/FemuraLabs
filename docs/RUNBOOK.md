@@ -262,6 +262,19 @@ free port:
 
     PYTHONPATH=src python scripts/api_demo.py
 
+The `/info` route can serve a written report instead of the computed default.
+Set `REPORT_FOLDER` and put an `info.json` in that folder:
+
+    PYTHONPATH=src python -m femuralabs.toolkit.cli --shape 2 3 4 --spacing 3 1 1 --out output
+    REPORT_FOLDER=output PYTHONPATH=src python -m femuralabs.toolkit.service.serve
+    # in a second terminal:
+    curl http://localhost:8000/info
+    # {"shape": [2, 3, 4], "spacing": [3.0, 1.0, 1.0], "dtype": "float32", "extent_mm": [6.0, 3.0, 4.0]}
+
+Without `REPORT_FOLDER`, or when the folder does not hold `info.json`,
+`/info` falls back to the four-key geometry dictionary. Both cases exit 200
+and both are covered by `tests/test_routes.py`.
+
 ## Recording a flow diagram
 
 Each change that alters the module flow gets a diagram in `docs/FLOW.md`.
