@@ -9,7 +9,7 @@ REQUIRED = [
     "docs/INVENTORY.md",
     "docs/DECISIONS.md",
     "docs/RUNBOOK.md",
-    "docs/AGENTS.md",
+    "AGENTS.md",
     "docs/FLOW.md",
     "docs/flow",
 ]

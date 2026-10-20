@@ -221,9 +221,8 @@ only `--id`, `--title`, `--description` and the JSON spec change:
     }
     EOF
 
-Expected: two printed lines, `wrote docs/flow/block-4-1.png` and
-`prepended section for block 4.1 to docs/FLOW.md`, then the new section at
-the top of `docs/FLOW.md` and the PNG in `docs/flow/`.
+Expected: two printed lines, `wrote docs/flow/write-info-out-flag.png`
+& `prepended section 'write-info-out-flag' to docs/FLOW.md` then the new section at the top of `docs/FLOW.md` and the PNG in `docs/flow/`.
 
 Node kinds map to colours: `module` (blue), `script` (green), `cli` (yellow),
 `file` (white-dashed), `external` (grey). Every node may carry `col` and `row`

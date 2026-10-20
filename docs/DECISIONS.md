@@ -141,8 +141,7 @@ it from the build context also keeps the transfer small.
 
 **Consequence:** Any file the container writes must be writable by UID 1000.
 A bind-mounted output folder created by root on the host will be unwritable
-by the container; create it with the host user before running (Block 4.2
-shows the exact sequence). If a future entry point needs `training/`, either
+by the container; create it with the host user before running. If a future entry point needs `training/`, either
 add `torch` to `requirements-tool.txt` (an image-size decision, see D001) or
 copy `training/` explicitly.
 
