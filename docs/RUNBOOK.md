@@ -46,7 +46,7 @@ existing behaviour is intact.
 
 Expected:
 
-    7 passed
+    14 passed
 
 `conftest.py` at the project root puts `src/` on the import path, so no
 `PYTHONPATH` prefix is needed for pytest.

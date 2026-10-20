@@ -7,6 +7,29 @@ entry before changing the behaviour it describes.
 Entries are numbered; new ones go at the top. Every entry has the same four
 parts: **Decision**, **Alternative rejected**, **Reason**, **Consequence**.
 
+## D017: writer tests use `tmp_path`, never `output/`
+
+**Decision:** `tests/test_report.py` uses pytest's `tmp_path` fixture for the
+output folder; no test writes to `output/` or `data/`.
+
+**Alternative rejected:** Test against the real `output/` folder after
+creating it, then delete the resulting file.
+
+**Reason:** A test that writes to a known folder collides with a real run
+(the file exists when the test starts, so `mkdir` fails, or the test's file is
+in the way of the run's file), leaves state behind when it fails before
+cleanup, and cannot run in parallel with anything else. `tmp_path` gives
+each test a unique empty folder, deletes it afterwards even when the test
+fails, and does not interact with the working tree. The same reason makes the
+writer take the folder as a parameter (D013): a test cannot point a hidden
+default at `tmp_path`; it can only point a parameter there.
+
+**Consequence:** Any new test that writes a file uses `tmp_path`. Tests that
+need a file on disk for input use `tmp_path` and create it in the test body,
+never `data/` or `output/`. The real `output/` is written only by
+`docker run` (or the host CLI when someone passes `--out output`
+deliberately); no `pytest` run touches it.
+
 ## D016: mounts use `/data` (read-only) and `/output` (writable)
 
 **Decision:** Every container run that reads host data mounts it at `/data`
