@@ -7,6 +7,32 @@ entry before changing the behaviour it describes.
 Entries are numbered; new ones go at the top. Every entry has the same four
 parts: **Decision**, **Alternative rejected**, **Reason**, **Consequence**.
 
+## D011: image runs as non-root `student`; training code excluded from the image
+
+**Decision:** The `Dockerfile` creates the account `student` with UID 1000
+(`RUN useradd --create-home student`) before `COPY src/`, then switches with
+`USER student`. The `src/femuralabs/toolkit/training/` subpackage is excluded
+from the build context by `.dockerignore`.
+
+**Alternative rejected:** Run as `root` (the default for `python:3.12-slim`)
+and ship all of `src/` including `training/`.
+
+**Reason:** A container running as `root` on the host kernel — which is what
+containers share — has root inside that namespace. A single kernel exploit
+or a mount-configured write path turns "the container is compromised" into
+"the host is compromised". Running as a non-root account removes that
+escalation path; nothing this project does needs root. The `training/`
+subpackage imports `torch`, which the tool image does not install (see D001),
+so shipping it would add dead code that cannot even be imported. Excluding
+it from the build context also keeps the transfer small.
+
+**Consequence:** Any file the container writes must be writable by UID 1000.
+A bind-mounted output folder created by root on the host will be unwritable
+by the container; create it with the host user before running (Block 4.2
+shows the exact sequence). If a future entry point needs `training/`, either
+add `torch` to `requirements-tool.txt` (an image-size decision, see D001) or
+copy `training/` explicitly.
+
 ## D010: organize `toolkit` into `training/` and `service/` subpackages
 
 **Decision:** `model.py` and `train_utils.py` live under

@@ -11,3 +11,5 @@ tests/
 *.nii.gz
 *.ipynb
 .env
+src/femuralabs/toolkit/training
+

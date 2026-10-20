@@ -62,22 +62,32 @@ Expected: all tests pass. This covers the array helpers (z-score,
 window, convolution) and the training utilities (seeding, checkpoint
 round trip).
 
-### Run the hello script in a container
+### Run the tool in a container
 
-The tool image needs NumPy only, so it uses `requirements-tool.txt`
-rather than the training requirements.
-```
+The tool image installs NumPy only, runs as the non-root account `student`,
+and starts the command-line geometry tool by default.
+
     docker build -t toolkit-hello .
     docker run --rm toolkit-hello
-```
 
+Expected:
 
-Expected output:
-```
     shape (z, y, x): (4, 6, 6)
     spacing (mm): (2.0, 1.0, 1.0)
     dtype: float32
-```
+    extent (mm): (8.0, 6.0, 6.0)
+
+Any command after the image name replaces the default entirely:
+
+    docker run --rm toolkit-hello python -m femuralabs.toolkit.cli --shape 3 5 5 --spacing 1.5 1.5 1.5
+    docker run --rm toolkit-hello id
+    docker run --rm -p 8000:8000 toolkit-hello python -m femuralabs.toolkit.service.serve
+
+The third command starts the HTTP service. `-p 8000:8000` (host:container)
+publishes the container's port 8000 on the workstation's port 8000, so
+`curl http://localhost:8000/health` on the workstation answers
+`{"status": "ok"}`. The image sets `EXPOSE 8000` as documentation; the
+`-p` flag is what actually forwards.
 
 
 ### Summarise a saved array

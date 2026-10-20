@@ -114,15 +114,27 @@ Expected:
     shape (z, y, x): (4, 6, 6)
     spacing (mm): (2.0, 1.0, 1.0)
     dtype: float32
+    extent (mm): (8.0, 6.0, 6.0)
 
-`--rm` deletes the container once the script exits; without it, every run
-leaves a stopped container behind. `docker ps` shows running containers
-(and only a header when nothing is running), and `docker ps -a` shows stopped
-ones.
+Any words after the image name replace the container's default command
+completely. Three examples:
 
-If the container prints `ModuleNotFoundError: No module named 'femuralabs'`,
-the `ENV PYTHONPATH=/app/src` line is missing from the Dockerfile or `src/`
-was not copied.
+    # different shape and spacing
+    docker run --rm toolkit-hello python -m femuralabs.toolkit.cli --shape 3 5 5 --spacing 1.5 1.5 1.5
+
+    # which account does the container use?
+    docker run --rm toolkit-hello id
+    # expected: uid=1000(student) gid=1000(student) groups=1000(student)
+
+    # start the service on host port 8000
+    docker run --rm -p 8000:8000 toolkit-hello python -m femuralabs.toolkit.service.serve
+    # in a second terminal:  curl http://localhost:8000/health
+
+`--rm` deletes the container when it stops; without it, stopped containers
+accumulate and `docker ps -a` lists them. `-p 8000:8000` forwards host port
+8000 to container port 8000 (host:container order). If it errors with
+`port is already allocated`, another program holds 8000 on the workstation —
+publish to `-p 8001:8000` and `curl :8001` instead.
 
 
 ## Verifying a build from a clean checkout
