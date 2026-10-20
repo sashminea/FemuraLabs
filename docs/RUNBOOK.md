@@ -208,3 +208,24 @@ output verified, add a section to this file with four parts:
 
 Do not add a command that has not been run and verified. An unrun command is a
 guess dressed as documentation.
+
+## Verifying a clean checkout
+
+Proves that the files tracked by git are enough to reproduce the project.
+Clones into a temporary folder, runs the test suite, runs the CLI, builds the
+image, runs it, and checks the output. Cleans up the clone on exit.
+
+From project root, with the virtual environment active:
+
+    bash scripts/clean_check.sh
+
+Expected: `pytest -q` passes (count varies), the four geometry lines are
+printed twice (once from the host Python, once from inside the container), and
+the script ends with:
+
+    clean checkout: all checks passed
+
+Run this before trusting any commit: a file that exists in your working tree
+but was never committed is invisible here. That is the point. The four failure
+modes and their meaning are documented in `docs/INVENTORY.md` under
+`scripts/clean_check.sh`.

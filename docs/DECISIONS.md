@@ -7,6 +7,29 @@ entry before changing the behaviour it describes.
 Entries are numbered; new ones go at the top. Every entry has the same four
 parts: **Decision**, **Alternative rejected**, **Reason**, **Consequence**.
 
+## D012: clean-checkout check as a script, not a manual sequence
+
+**Decision:** The proof that committed files reproduce the project is a
+single script, `scripts/clean_check.sh`, committed and run before any release
+or handover. The four checks it runs — pytest, CLI, docker build, docker run
+— are always run together, never individually as part of this proof.
+
+**Alternative rejected:** A manual sequence documented in the runbook and
+typed from memory each time.
+
+**Reason:** Manual sequences drift. A step is skipped "because I know it
+works", or one command is mistyped, or the working tree is used instead of a
+clone. The script removes both failure modes: it always clones (so the working
+tree is invisible), and it always runs the same four checks in the same order.
+The order matters — pytest is fastest and catches module-level errors before
+the Docker build wastes minutes on an image that cannot import.
+
+**Consequence:** When a new stage is added (a new image, a second service, a
+Compose stack), add it to the script in the correct position and re-run.
+Publishing a build that has not passed `clean_check.sh` is a decision to
+investigate a report from someone else. This entry is the answer to
+"should I run it?" — yes, every time.
+
 ## D011: image runs as non-root `student`; training code excluded from the image
 
 **Decision:** The `Dockerfile` creates the account `student` with UID 1000
