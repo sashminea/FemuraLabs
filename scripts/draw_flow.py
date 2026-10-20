@@ -138,7 +138,11 @@ def prepend(flow_md: Path, slug: str, title: str, description: str, png: Path) -
     text = flow_md.read_text()
     if MARKER not in text:
         raise SystemExit(f"Marker {MARKER!r} missing from {flow_md}")
-    img_tag = f'<img src="{png.as_posix()}"'
+    
+    # Compute the path relative to the directory containing FLOW.md
+    rel_png = png.relative_to(flow_md.parent)
+    img_tag = f'<img src="{rel_png.as_posix()}"'
+    
     if img_tag in text:
         raise SystemExit(f"A diagram with slug {slug!r} already exists in {flow_md}")
     section = (
@@ -157,7 +161,7 @@ def main() -> int:
     p.add_argument("--description", required=True,
                    help="2–4 sentences stating what the diagram shows")
     p.add_argument("--spec", default="-", help='JSON spec path, or "-" for stdin')
-    p.add_argument("--out-dir", type=Path, default=Path("flow"))
+    p.add_argument("--out-dir", type=Path, default=Path("docs/flow"))
     p.add_argument("--flow-md", type=Path, default=Path("docs/FLOW.md"))
     a = p.parse_args()
 
