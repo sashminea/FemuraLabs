@@ -3,8 +3,13 @@
 Every choice in this repository that could reasonably have been made
 differently, with the alternative that was rejected and the reason. Read an entry before changing the behaviour it describes.
 
-Entries are numbered; new ones go at the top. Every entry has the same four
-parts: **Decision**, **Alternative rejected**, **Reason**, **Consequence**.
+Entries are numbered; new ones go at the top. Every entry has the same four parts: **Decision**, **Alternative rejected**, **Reason**, **Consequence**.
+
+> **Numbering note.** D009, D018 and D019 are not present. D009 was planned
+> for the toolkit reorganization and superseded by D010 (the broader scope
+> made a service-only entry redundant) before it was written. D018 and D019
+> were reserved for the layer-cache work; that work was not carried out, so
+> no entry records an unmeasured claim.
 
 ## D021: two Compose services — `api` (built) and `web` (public image)
 

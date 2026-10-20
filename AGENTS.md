@@ -28,41 +28,42 @@ The repository is a learning and research exercise.
 
 ## Layout
 
-    src/femuralabs/          Importable package. Only place code may be added as a module.
-      toolkit/
-        arrays.py            NumPy array helpers (zscore, window, conv2d).
-        summary.py           Statistics of a .npy file; also a command line.
-        volume_info.py       make_volume, describe (shape, spacing, extent).
-        cli.py               Command-line geometry tool.
-        training/
-          model.py           SmallCNN.
-          train_utils.py     Seeding, device, checkpoints, logging, plotting.
-        service/
-          routes.py          Pure request routing.
-          api.py             HTTP handler.
-          serve.py           Process entry point (binds 0.0.0.0:PORT).
-          
-    scripts/                 One-off scripts, run by hand.
-      hello_pipeline.py      Prints the geometry of a synthetic volume.
-      train_small_cnn.py     Training loop with seeded reproducibility.
-      compare_runs.py        Compares two runs' metrics.csv.
-      check_tree.py          Verifies that the files the project claims to have exist.
+    src/femuralabs/toolkit/
+      arrays.py     summary.py     volume_info.py
+      cli.py        io.py          report.py
+      training/     model.py       train_utils.py
+      service/      routes.py      api.py      serve.py
 
-    tests/                   pytest files. One test file per module under src/.
+    scripts/                 Run-by-hand entry points.
+      hello_pipeline.py        Prints a synthetic volume's geometry.
+      train_small_cnn.py       Training loop with seeded reproducibility.
+      compare_runs.py          Compares two runs' metrics.csv.
+      api_demo.py              Starts the service in a thread and calls it.
+      check_tree.py            Verifies the files the project claims to exist.
+      clean_check.sh           Clones into /tmp and runs four checks there.
+      draw_flow.py             Renders a flow diagram to docs/flow/.
 
-    docs/                    Documentation. Do not add prose anywhere else.
-      INVENTORY.md           Every tracked path, described in one or two sentences.
-      DECISIONS.md           Every design choice that could have been made differently.
-      RUNBOOK.md             Every command that has been run, with expected output.
+    tests/                   pytest suite (16 tests across 5 files).
+
+    docs/
+      INVENTORY.md           Every tracked path, one row per file.
+      DECISIONS.md           Every design choice, with the rejected alternative.
+      RUNBOOK.md             Every verified command, expected output, failure modes.
       FLOW.md                Cumulative annotated call graphs (newest first).
       flow/                  PNG diagrams referenced from FLOW.md.
 
+    web/index.html           Static page served by the `web` Compose service.
 
-    docker/, Dockerfile      Container recipe. Currently one image: toolkit-hello.
+    Dockerfile               Tool image (numpy only, non-root `student`).
+    docker-compose.yml       `api` (built) + `web` (public image) on one network.
+    requirements.txt         Dev environment (torch, numpy, matplotlib, pytest).
+    requirements-tool.txt    Tool image only (numpy, pinned).
+    .dockerignore            Excludes .venv, data, output, runs, reports, secrets.
+    .gitignore               Excludes .venv, data, output, runs, reports, *.pt.
 
-    data/                    Downloaded or generated input. Not committed.
-    runs/                    Training run output. Tracked in error; see D006.
-    reports/                 Figures for reports. Committed.
+    data/                    Input data. Not committed (gitignored).
+    output/                  Written by the container or the host CLI. Not committed.
+    runs/, reports/          Training output and figures. Tracked in error; see D006.
     notebooks/               Exploration only. Committed, not authoritative.
 
     AGENTS.md                This file.
@@ -79,7 +80,8 @@ Every Python file in this repository is exactly one of these:
 - Takes its inputs as parameters.
 - Returns values. Does not print.
 - Has no hidden global state.
-- Is covered by at least one test under `tests/`.
+- Is exercised by at least one test under `tests/`, directly or via a caller.
+  Every module has a test; the coverage is not exhaustive (see `INVENTORY.md`).
 
 **Script** — a file under `scripts/`. Run by hand.
 
@@ -171,11 +173,11 @@ Follow this order for every change, no exceptions.
 1. Run the code and paste the actual output; do not describe what it "should" print.
 2. Update `docs/INVENTORY.md` if a file was added or a public function was added.
 3. Update `docs/DECISIONS.md` if a design choice was made.
-4. Update `docs/RUNBOOK.md` if a new command was verified.
-5. Update `scripts/check_tree.py`'s `REQUIRED` list if a file was added or removed.
-6. --slug is semantic and filename-safe; never use chapter, block, session or date references in the slug.
-5. Run `scripts/draw_flow.py` if the change altered the module flow, and
-   commit the resulting PNG and FLOW.md section alongside the code.
+4. Update `docs/FLOW.md` if the change altered the module flow, using
+   `scripts/draw_flow.py`. The `--slug` is semantic and filename-safe:
+   `mounts-readonly-data-writable-output`, never a chapter, block, session
+   or date reference.
+5. Update `docs/RUNBOOK.md` if a new command was verified.
 6. Update `scripts/check_tree.py`'s `REQUIRED` list if a file was added or removed.
 7. `pytest -q` — confirm the test suite still passes.
 8. `git diff --cached` — review the exact content being committed.
@@ -209,6 +211,7 @@ These are hard rules. Deviating breaks reproducibility or exposes data.
 - Any file containing a token, key, password, or personal path.
 - Screenshots that have not been cropped to remove the terminal username,
   hostname, home folder path, bookmarks, and notifications.
+- - `data/`, `output/`, any `.npy` or `.nii.gz` file, or any `*.pt` / `*.pth` weights.
 
 **Never remove without a decision entry:**
 
@@ -226,6 +229,13 @@ These are hard rules. Deviating breaks reproducibility or exposes data.
 - That a file in `notebooks/` is authoritative. Notebooks are exploration;
   the modules under `src/` are the definition.
 - That any mount point the image does not expect is safe. Mounts are `/data` (read-only) and `/output` (writable). Mounting over `/app` or `/app/src` hides the code inside the image. See D016 in `DECISIONS.md`.
+
+**Open items (recorded, not yet acted on):**
+
+- `runs/`, `reports/` and `notebooks/*.ipynb` are tracked in git despite the
+  "Never commit" rule above. The cleanup is deferred; see D006 in
+  `DECISIONS.md`. Until then, `git status` after a training run shows new
+  files under `runs/` as untracked — do not `git add` them.
 
 **Never write:**
 

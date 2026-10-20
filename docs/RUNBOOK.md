@@ -77,7 +77,7 @@ The six numbers 0–5 sum to 15, so a mean of 2.50 is checkable by hand without
 trusting the tool.
 
 If the command fails with `ModuleNotFoundError: No module named 'femuralabs'`,
-`PYTHONPATH=src` was omitted. If it fails with a `FileNotFoundException`,
+`PYTHONPATH=src` was omitted. If it fails with a `FileNotFoundError`,
 `data/small.npy` was not created — re-run the second line from the project
 root.
 
@@ -283,29 +283,6 @@ Common failures:
   failed (network issue); `docker pull python:3.12-slim` first.
 - `/info` returns the fallback `(4, 6, 6)` shape — `output/info.json` is
   missing; see above.
-
-## Verifying a build from a clean checkout
-
-The build above copies from the working folder, not from git. A file that was
-never committed builds on this workstation but fails on every other. The clean
-checkout proves that committed files alone are enough.
-
-    cd /tmp
-    rm -rf scratch_check
-    git clone ~/FemuraLabs scratch_check
-    cd scratch_check
-    docker build -t toolkit-hello-clean .
-    docker run --rm toolkit-hello-clean
-    cd ~/FemuraLabs
-
-Expected: the same three lines as the previous section, from a folder that
-contains nothing but tracked files.
-
-If `COPY` fails with `file not found`, a file is uncommitted or excluded by
-`.dockerignore`. If the build succeeds but `docker run` fails with
-`ModuleNotFoundError`, the working build was relying on a file that is not in
-git, and the local cache masked the problem — exactly the failure the clean
-checkout is designed to catch.
 
 
 ## Running the geometry service
