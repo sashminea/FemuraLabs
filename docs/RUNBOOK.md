@@ -46,8 +46,9 @@ existing behaviour is intact.
 
 Expected:
 
-    14 passed
+    n passed 
 
+`n` is any variable integer which might increase or decrease based on test modules, expect all test scripts to pass 
 `conftest.py` at the project root puts `src/` on the import path, so no
 `PYTHONPATH` prefix is needed for pytest.
 
