@@ -11,6 +11,30 @@ Entries are numbered; new ones go at the top. Every entry has the same four part
 > were reserved for the layer-cache work; that work was not carried out, so
 > no entry records an unmeasured claim.
 
+## D022: `verdict` handles lower-is-better metrics by argument order
+
+**Decision:** `verdict(base, cand, threshold)` always treats the first
+list as the baseline and the second as the candidate; higher is better.
+A metric where lower is better, such as a surface distance in
+millimetres, is handled by swapping the arguments at the call site
+(`verdict(cand_hd95, base_hd95, 1.0)`), not by a `direction` parameter.
+
+**Alternative rejected:** A `direction: "increase" | "decrease"`
+parameter, with the function flipping the sign internally.
+
+**Reason:** A `direction` parameter adds a branch to the function and
+one more place where a typo can silently produce a wrong verdict.
+Swapping the argument order puts the direction in the caller's hands,
+where the semantics are visible: "`verdict(baseline=worse, candidate=
+better)`" reads as what it is. The function stays three lines and
+mathematically unidirectional.
+
+**Consequence:** Every caller with a lower-is-better metric must remember
+to swap. The runbook records this convention with one example. Guards
+(a metric that should not worsen) use the same rule with a negative
+threshold: `verdict(base, cand, -0.005)` asks "is the candidate at most
+0.005 worse than the baseline".
+
 ## D021: two Compose services — `api` (built) and `web` (public image)
 
 **Decision:** `docker-compose.yml` defines two services. `api` is built from
