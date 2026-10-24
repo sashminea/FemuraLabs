@@ -12,6 +12,11 @@ import torch
 
 from femuralabs.toolkit.io import save_json
 
+import os
+import platform
+import sys
+from importlib import metadata
+
 def set_seed(seed: int) -> None:
 	"""Seed every random number generator used in training."""
 	random.seed(seed)
@@ -151,3 +156,23 @@ def evaluate_with_accuracy(
 	return total / count, correct / count
 
 
+def package_version(name: str) -> str:
+    """Return the installed version of a package, or 'not installed'."""
+    try:
+        return metadata.version(name)
+    except metadata.PackageNotFoundError:
+        return "not installed"
+
+
+def environment_record(gpu: str = "none") -> dict:
+    """Return software and hardware facts as a flat dictionary."""
+    return {
+        "python": sys.version.split()[0],
+        "numpy": package_version("numpy"),
+        "torch": package_version("torch"),
+        "torchvision": package_version("torchvision"),
+        "system": platform.system(),
+        "machine": platform.machine(),
+        "cpu_count": os.cpu_count(),
+        "gpu": gpu,
+    }

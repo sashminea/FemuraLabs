@@ -83,6 +83,40 @@ If the command fails with `ModuleNotFoundError: No module named 'femuralabs'`,
 root.
 
 
+## Training the small CNN
+
+Trains `SmallCNN` on MNIST for a few epochs. First run downloads the
+MNIST data into `data/` (a few MB). Each run writes one folder under
+`runs/`, named by `--run-name`, containing `config.json`,
+`environment.json`, `metrics.csv` and `best.pt`.
+
+    PYTHONPATH=src python scripts/train_small_cnn.py \
+        --seed 0 --epochs 5 \
+        --run-name run_a_s0 \
+        --commit "$(git describe --always --dirty)"
+
+Expected: one line per epoch with training loss, validation loss and
+accuracy, then a PNG in `reports/run_a_s0_curves.png`.
+
+The `$(...)` runs `git describe` before the script starts, so
+`config.json` records the exact commit. A `-dirty` suffix in the hash
+is a warning: the run was started from an uncommitted tree, and the
+recorded commit is not the code that actually ran.
+
+`environment.json` is written by
+`train_utils.environment_record()`. It records Python, numpy, torch
+and torchvision versions, the OS, CPU count and (when a GPU is used)
+the GPU name. If a future run gives different numbers, comparing the
+two `environment.json` files shows whether a package update is the
+cause.
+
+Do not reuse a run name; `runs/<name>/` is overwritten. For three
+seeds of one variant, use `run_a_s0`, `run_a_s1`, `run_a_s2`.
+
+On Windows PowerShell, replace `PYTHONPATH=src python` with a separate
+line `$env:PYTHONPATH = "src"` before the `python` call, and replace
+`"$(git describe ...)"` with `(git describe --always --dirty)`.
+
 ## Building the tool container
 
 Builds the `toolkit-hello` image. The image installs numpy only and runs

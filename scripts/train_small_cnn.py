@@ -20,6 +20,9 @@ from femuralabs.toolkit.training.train_utils import (
     save_config,
     set_seed,
     train_one_epoch,
+    environment_record,
+    save_config,
+    set_seed,
 )
 
 
@@ -56,9 +59,17 @@ def main(argv: list[str] | None = None) -> int:
     set_seed(args.seed)
     device = get_device()
 
+
+
     run_dir = Path("runs") / args.run_name
     run_dir.mkdir(parents=True, exist_ok=True)
     save_config(run_dir / "config.json", vars(args))
+    gpu = "none"
+    
+    if device.type == "cuda":
+        import torch as _torch
+        gpu = _torch.cuda.get_device_name(0)
+    save_config(run_dir / "environment.json", environment_record(gpu=gpu))  
 
     train_loader, val_loader = build_loaders(args.batch_size, args.seed, Path("data"))
 

@@ -11,6 +11,31 @@ Entries are numbered; new ones go at the top. Every entry has the same four part
 > were reserved for the layer-cache work; that work was not carried out, so
 > no entry records an unmeasured claim.
 
+## D024: environment record written by code, as JSON
+
+**Decision:** `train_utils.environment_record()` returns a flat dict of
+software and hardware versions, and the training script writes it as
+`environment.json` next to `config.json` and `metrics.csv`. The record
+is not produced by shell lines in the launch command.
+
+**Alternative rejected:** Three shell lines appending `python --version`,
+`pip freeze`, and `sha256sum data/splits.json` to an `environment.txt`.
+
+**Reason:** Shell lines are skipped on busy days — the exact days the
+record matters most. The `environment_record()` function is called once
+inside `main()`, so the record is always written when a run starts, never
+by human memory. JSON (not TXT) matches the format of the other files
+in the run folder and lets `read_metrics`, `load_config` and any future
+tool read all run folder files with the same `json.loads`.
+
+**Consequence:** The record captures the Python and package versions
+in the *training environment* (the venv), not the shell's default
+Python. A wrong-venv run is caught by the `which python` check in the
+runbook before this becomes an issue. GPU detection is optional and
+passed by the caller — the default `"none"` means "CPU", not "unknown";
+if `torch.cuda.is_available()` at the call site is true, the training
+script passes the actual card name.
+
 ## D022: `verdict` handles lower-is-better metrics by argument order
 
 **Decision:** `verdict(base, cand, threshold)` always treats the first
