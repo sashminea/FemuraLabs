@@ -49,6 +49,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--lr", type=float, default=0.01)
     parser.add_argument("--run-name", type=str, default="run_a")
+    parser.add_argument("--commit", type=str, default="unknown",
+                    help='git describe --always --dirty; "unknown" when not supplied')
     args = parser.parse_args(argv)
 
     set_seed(args.seed)

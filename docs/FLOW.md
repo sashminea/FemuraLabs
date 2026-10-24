@@ -25,6 +25,14 @@ white-dashed = file on disk, grey = external.
 
 ---
 
+## Verdict from per-seed metrics
+
+<img src="flow/verdict-three-way.png" alt="Verdict from per-seed metrics">
+
+Each variant is trained three times, one seed per run. Each run folder records the seed and the git commit in its config, so the folder is self-describing; the final row of its metrics.csv is that seed's score. Three baseline scores and three candidate scores feed verdict(base, cand, T). The function computes d = mean(cand) - mean(base) and s = max(stdev(base), stdev(cand)), then compares the interval d ± 2s with the threshold T. Three outcomes: supported if the whole interval is at or above T, not supported if entirely below, inconclusive otherwise. Lower-is-better metrics are handled by swapping the arguments at the call site.
+
+---
+
 <!-- INSERT HERE -->
 
 ## Compose: api and web on one network
