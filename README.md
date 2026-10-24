@@ -16,20 +16,32 @@ mechanical axes and alignment angles.
 - Simulate a simple osteotomy wedge
 - Produce a validation report with all measurements
 
-Right now it contains three pieces of foundation:
+Right now it contains four pieces of foundation:
 
 **Array toolkit.** A tested set of helpers for holding images in NumPy
 arrays: a `.npy` summary command-line tool, per-volume z-score
 normalisation, a linear Hounsfield unit intensity window, and a slow
-reference 2D convolution that matches a hand-worked Sobel result. 
+reference 2D convolution that matches a hand-worked Sobel result.
 
-**Training pipeline.** — A small convolutional network and a complete
+**Training pipeline.** A small convolutional network and a complete
 PyTorch training loop with seeded randomness, per-epoch CSV logging,
 best-checkpoint saving by validation loss, and plotted learning curves.
-Two runs with the same seed produce nearly identical numbers.
+Two runs with the same seed produce nearly identical numbers. Every run
+writes `config.json` (including the seed and the git commit hash),
+`environment.json` (Python, numpy, torch, torchvision, OS, CPU count,
+GPU), `metrics.csv`, and the best checkpoint.
 
-**Container and service** — a `Dockerfile` that runs the geometry tool as a non-root user on CPU only, and a `docker-compose.yml` that starts an HTTP service and a static page together on one private network. Data is mounted read-only, results are mounted writable, the image holds neither folder.
+**Verdict rule.** `femuralabs.toolkit.decision.verdict` takes two lists
+of per-seed scores (baseline and candidate) and a threshold, and returns
+`supported` / `inconclusive` / `not supported` by comparing the interval
+`d ± 2s` with the threshold. This is the rule that decides whether a
+change in a comparison is real or run-to-run noise.
 
+**Container and service.** A `Dockerfile` that runs the geometry tool
+as a non-root user on CPU only, and a `docker-compose.yml` that starts
+an HTTP service and a static page together on one private network. Data
+is mounted read-only, results are mounted writable, the image holds
+neither folder.
 
 ## Quick start
 
@@ -49,7 +61,8 @@ build from https://pytorch.org/get-started/locally and reinstall.
 
 ### The three things to try first
 
-    # 1. Tests — 16 pass, covering arrays, training utils, routes, CLI, report
+    # 1. Tests — 18 pass, covering arrays, training utils, routes, CLI,
+    #    report, and the verdict rule
     pytest -q
 
     # 2. The tool in a container — prints a synthetic volume's geometry
@@ -68,14 +81,14 @@ a saved `.npy`, training the small CNN, comparing two runs — is in
 
     src/femuralabs/toolkit/
       arrays.py     summary.py     volume_info.py
-      cli.py        io.py          report.py
+      cli.py        io.py          report.py     decision.py
       training/     model.py       train_utils.py
-      service/      routes.py      api.py      serve.py
+      service/      routes.py      api.py        serve.py
 
     scripts/        run-by-hand entry points:
                     hello_pipeline.py, train_small_cnn.py, compare_runs.py,
                     api_demo.py, check_tree.py, clean_check.sh, draw_flow.py
-    tests/          pytest suite (16 tests across 5 files)
+    tests/          pytest suite (18 tests across 6 files)
     web/            static page served by the `web` service
     docs/           INVENTORY, DECISIONS, RUNBOOK, FLOW, flow/ (PNG diagrams)
     AGENTS.md       working protocol and constraints for agents and contributors
@@ -102,9 +115,20 @@ Maintainer detail lives in `docs/`:
 
 Seeds are fixed for Python, NumPy and PyTorch, including CUDA. The
 train/validation split uses a seeded generator, so it is identical on
-every run. Every run writes `config.json`, `metrics.csv` and the best
-checkpoint into its own folder under `runs/`. Repeating a run with the
-same seed produces a validation loss that differs by `0.00e+00` on CPU
-(and by a value in the fifth or sixth decimal on GPU, where floating
-point addition order differs between kernels). `scripts/compare_runs.py`
-reports the largest gap.
+every run.
+
+Every training run writes a folder under `runs/` containing
+`config.json`, `environment.json`, `metrics.csv`, and the best
+checkpoint. `config.json` records every argument, including the seed and
+the git commit hash (supplied by `--commit` from `git describe --always
+--dirty`). `environment.json` records Python, numpy, torch and
+torchvision versions, plus OS, CPU count and GPU name, so a future run
+that gives different numbers can be traced to a package or hardware
+change.
+
+Repeating a run with the same seed produces a validation loss that
+differs by `0.00e+00` on CPU (and by a value in the fifth or sixth
+decimal on GPU, where floating point addition order differs between
+kernels). `scripts/compare_runs.py` reports the largest gap, and
+`femuralabs.toolkit.decision.verdict` turns repeated-seed scores into a
+three-way verdict (`supported` / `inconclusive` / `not supported`).
