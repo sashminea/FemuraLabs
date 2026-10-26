@@ -462,3 +462,24 @@ created if missing and left unchanged if present.
 
 `output/` and `data/` are both ignored by git; nothing under them is
 committed.
+
+## Combining the two reference segmentations
+
+The dataset ships femur and tibia in two separate segmentations. The
+pipeline reads one combined multi-label NIfTI on the full-limb grid.
+
+1. In 3D Slicer, open the full-limb volume
+   `SMIR.Lower_limb.051Y.F.CT.168_1/CT.168.nrrd` (`File -> Add Data`).
+2. Load both segmentations from the same folder:
+   `...-Shanks-Feet_Segmentation.seg` and `...-Thighs_Reconstruction`.
+3. Open the Segment Editor. For each segmentation, set the **Source
+   volume** to the full-limb volume.
+4. Renumber labels so femur and tibia have distinct values; record the
+   mapping in `DATA_NOTES.md`.
+5. Right-click the segmentation node in the Data module ->
+   `Export to file` -> select `NIfTI (.nii.gz)`. Save to
+   `data/raw/case01/combined_seg.nii.gz` (gitignored).
+6. Verify: `python -c "import SimpleITK as sitk; im=sitk.ReadImage('data/raw/case01/combined_seg.nii.gz'); print(im.GetSize(), im.GetSpacing(), im.GetOrigin())"`. Size must match the `_1` volume (512, 512, 1637).
+
+Do not commit the combined file; it is derived from the original data and
+carries the same licence.

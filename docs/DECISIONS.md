@@ -11,6 +11,34 @@ Entries are numbered; new ones go at the top. Every entry has the same four part
 > were reserved for the layer-cache work; that work was not carried out, so
 > no entry records an unmeasured claim.
 
+## D025: two segmentations combined into one multi-label NIfTI on the full-limb grid
+
+**Decision:** The femur and tibia masks used by the pipeline come from a
+single multi-label NIfTI, produced in 3D Slicer by loading the
+`Shanks-Feet` and `Thighs_Reconstruction` segmentations onto the full-limb
+volume (`_1`), renumbering the labels so femur and tibia have distinct
+values, and exporting to one `.nii.gz` on `_1`'s grid.
+
+**Alternative rejected:** (a) Use the two `.seg` files directly in Python.
+(b) Use only one segmentation (femur-only path).
+
+**Reason:** (a) `.seg` is a Slicer-internal format; reading it from Python
+either requires Slicer's Python interpreter (which is not the project
+environment) or round-tripping through NIfTI, which the combined export
+does anyway. Loading two separate `.seg` files in the pipeline also creates
+two grids that must be reconciled downstream, and any mismatch becomes a
+silent error. (b) Would remove the HKA angle from the project, which is the
+central measurement the application is built around; the dataset supports
+it, so cutting it would be a scope decision without a data reason.
+
+**Consequence:** The combined `.nii.gz` becomes the canonical reference for
+every later stage (mask extraction, meshing, landmark detection). The two
+source `.seg` files stay in `data/raw/` as the original record but are not
+read by any project code. Label numbering (femur=1, tibia=2, and so on) is
+recorded in `DATA_NOTES.md` and in the export step of the runbook. If a
+second subject is added later (stretch item S1), the same combined-export
+step is repeated, not the split-file load.
+
 ## D024: environment record written by code, as JSON
 
 **Decision:** `train_utils.environment_record()` returns a flat dict of
