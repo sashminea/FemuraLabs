@@ -3,19 +3,18 @@
 A research prototype for lower-limb CT analysis: segment femur and tibia
 from CT, build 3D meshes, place anatomical landmarks, and compute
 mechanical axes and alignment angles. Development uses the public
-**VSDFullBodyBoneReconstruction** dataset (segmentations and surface
-models of pelvis and lower-limb bones, made from a public postmortem CT
-collection; see `docs/DATA_NOTES.md`). No patient data is included or
-required.
+**VSDFullBodyBoneReconstruction** dataset (segmentations and surface models
+of pelvis and lower-limb bones, made from a public postmortem CT collection;
+see `docs/data.md`). No patient data is included or required.
 
 <img width="2873" height="852" alt="FemuraLabs Banner" src="https://github.com/user-attachments/assets/41d18b7f-2fb5-4f52-b184-500358c6faa7" />
 
 ![3D Slicer: lower-limb CT with femur and tibia segmentations loaded](docs/img/case01_overview.png)
 
-*VSDFullBodyBoneReconstruction, subject 006 loaded in 3D Slicer:
+*Case 01 (VSDFullBodyBoneReconstruction, subject 006) loaded in 3D Slicer:
 lower-limb CT with the reference femur and tibia segmentations. The femur
 comes from the thighs reconstruction, the tibia from the shanks-feet
-segmentation; see `docs/DATA_NOTES.md` for how the two are combined.*
+segmentation; see `docs/data.md` for how the two are combined.*
 
 ## What it does (eventually)
 
@@ -25,34 +24,27 @@ segmentation; see `docs/DATA_NOTES.md` for how the two are combined.*
 - Detect hip, knee and ankle landmarks
 - Compute mechanical axes and alignment angles (HKA, mLDFA, MPTA)
 - Simulate a simple osteotomy wedge
-- Produce a validation report with all measurements
+- Produce a validation report
 
 Right now it contains four pieces of foundation:
 
-**Array toolkit.** A tested set of helpers for holding images in NumPy
-arrays: a `.npy` summary command-line tool, per-volume z-score
-normalisation, a linear Hounsfield unit intensity window, and a slow
-reference 2D convolution that matches a hand-worked Sobel result.
-
-**Training pipeline.** A small convolutional network and a complete
-PyTorch training loop with seeded randomness, per-epoch CSV logging,
-best-checkpoint saving by validation loss, and plotted learning curves.
-Two runs with the same seed produce nearly identical numbers. Every run
-writes `config.json` (including the seed and the git commit hash),
-`environment.json` (Python, numpy, torch, torchvision, OS, CPU count,
-GPU), `metrics.csv`, and the best checkpoint.
-
-**Verdict rule.** `femuralabs.toolkit.decision.verdict` takes two lists
-of per-seed scores (baseline and candidate) and a threshold, and returns
-`supported` / `inconclusive` / `not supported` by comparing the interval
-`d ± 2s` with the threshold. This is the rule that decides whether a
-change in a comparison is real or run-to-run noise.
-
-**Container and service.** A `Dockerfile` that runs the geometry tool
-as a non-root user on CPU only, and a `docker-compose.yml` that starts
-an HTTP service and a static page together on one private network. Data
-is mounted read-only, results are mounted writable, the image holds
-neither folder.
+- **Array toolkit.** NumPy helpers for holding images in arrays: a `.npy`
+  summary CLI, per-volume z-score normalisation, a linear Hounsfield-unit
+  intensity window, and a reference 2D convolution checked against a
+  hand-worked Sobel result.
+- **Training pipeline.** A small CNN and a complete PyTorch training loop
+  with seeded reproducibility, per-epoch CSV logging, best-checkpoint
+  saving, and plotted learning curves. Every run writes `config.json`
+  (with seed and git commit hash), `environment.json`, `metrics.csv`, and
+  the best checkpoint.
+- **Verdict rule.** `femuralabs.toolkit.decision.verdict` turns two lists
+  of per-seed scores and a threshold into
+  `supported` / `inconclusive` / `not supported` by comparing the interval
+  `d ± 2s` with the threshold.
+- **Container and service.** A `Dockerfile` that runs the geometry tool as
+  a non-root user on CPU, and a `docker-compose.yml` that starts an HTTP
+  service and a static page together on one private network. Data mounted
+  read-only, results writable, image holds neither folder.
 
 ## Quick start
 
@@ -72,8 +64,7 @@ build from https://pytorch.org/get-started/locally and reinstall.
 
 ### The three things to try first
 
-    # 1. Tests — 18 pass, covering arrays, training utils, routes, CLI,
-    #    report, and the verdict rule
+    # 1. Tests
     pytest -q
 
     # 2. The tool in a container — prints a synthetic volume's geometry
@@ -84,92 +75,49 @@ build from https://pytorch.org/get-started/locally and reinstall.
     curl http://localhost:8000/health
     docker compose down
 
-The full list of commands — mounting data in and results out, summarising
-a saved `.npy`, training the small CNN, comparing two runs — is in
-`docs/RUNBOOK.md`, with expected output and failure modes.
-
-## Layout
-
-    src/femuralabs/toolkit/
-      arrays.py     summary.py     volume_info.py
-      cli.py        io.py          report.py     decision.py
-      training/     model.py       train_utils.py
-      service/      routes.py      api.py        serve.py
-
-    scripts/        run-by-hand entry points:
-                    hello_pipeline.py, train_small_cnn.py, compare_runs.py,
-                    api_demo.py, check_tree.py, clean_check.sh, draw_flow.py
-    tests/          pytest suite (18 tests across 6 files)
-    web/            static page served by the `web` service
-    docs/           INVENTORY, DECISIONS, RUNBOOK, FLOW, flow/ (PNG diagrams)
-    AGENTS.md       working protocol and constraints for agents and contributors
-
-    Dockerfile                tool image (numpy only, non-root student)
-    docker-compose.yml        api + web on one private network
-    requirements.txt          dev env (torch, numpy, matplotlib, pytest)
-    requirements-tool.txt     tool image only (numpy, pinned)
-    data/, output/, runs/     not committed
+The full list of commands — mounting data in and results out, summarising a
+saved `.npy`, training the small CNN, comparing two runs — is in
+`docs/runbook.md`, with expected output and failure modes.
 
 ## Documentation
 
-Maintainer detail lives in `docs/`:
-
-- `docs/RUNBOOK.md` — every command that has been run, with expected output
-  and failure modes.
-- `docs/DECISIONS.md` — every design choice, with the alternative that was
-  rejected and why.
-- `docs/INVENTORY.md` — every tracked path, one row per file.
-- `docs/FLOW.md` — annotated call graphs, cumulative.
-- `AGENTS.md` — working protocol, constraints, documentation rules.
+- `docs/runbook.md` — every command that has been run, with expected
+  output and failure modes.
+- `docs/decisions.md` — architectural choices, with the alternative
+  rejected and the reason.
+- `docs/architecture.md` — folder map and pipeline stages.
+- `docs/data.md` — dataset, licence, coverage, how the two reference
+  segmentations are combined.
+- `docs/FLOW.md` — cumulative annotated call graphs, newest first.
+- `AGENTS.md` — rules for AI agents and contributors.
+- `CITATION.cff` — citations for dataset, paper, tools.
+- `LICENSE` — MIT for the code; data has its own licences (below).
 
 ## Reproducibility
 
 Seeds are fixed for Python, NumPy and PyTorch, including CUDA. The
-train/validation split uses a seeded generator, so it is identical on
-every run.
+train/validation split uses a seeded generator, so it is identical on every
+run. Every training run writes a folder under `runs/` containing
+`config.json`, `environment.json`, `metrics.csv`, and the best checkpoint.
 
-Every training run writes a folder under `runs/` containing
-`config.json`, `environment.json`, `metrics.csv`, and the best
-checkpoint. `config.json` records every argument, including the seed and
-the git commit hash (supplied by `--commit` from `git describe --always
---dirty`). `environment.json` records Python, numpy, torch and
-torchvision versions, plus OS, CPU count and GPU name, so a future run
-that gives different numbers can be traced to a package or hardware
-change.
-
-Repeating a run with the same seed produces a validation loss that
-differs by `0.00e+00` on CPU (and by a value in the fifth or sixth
-decimal on GPU, where floating point addition order differs between
-kernels). `scripts/compare_runs.py` reports the largest gap, and
+Repeating a run with the same seed produces a validation loss that differs
+by `0.00e+00` on CPU (and by a value in the fifth or sixth decimal on GPU,
+where floating-point addition order differs between kernels).
+`scripts/compare_runs.py` reports the largest gap;
 `femuralabs.toolkit.decision.verdict` turns repeated-seed scores into a
-three-way verdict (`supported` / `inconclusive` / `not supported`).
+three-way verdict.
 
 ## Data and tools
 
-**Data.** [VSDFullBodyBoneReconstruction](https://zenodo.org/records/8302449)
-— segmentations and surface models of pelvis and lower-limb bones, derived
-from a public postmortem CT collection. Licence: Creative Commons
-Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0).
-The source CT collection is on Zenodo at record 8270365. Data are not
-committed to this repository; see `docs/DATA_NOTES.md` for the download
-procedure and the combined-segmentation step.
+Uses [VSDFullBodyBoneReconstruction](https://doi.org/10.5281/zenodo.8302449)
+(CC BY-NC-SA 4.0) and its source CT collection (CC BY-NC-SA 3.0 CH). Data
+are not committed. See `docs/data.md` for coverage and `CITATION.cff` for
+citations.
 
-**Reference segmentations.** The femur and tibia masks used for validation
-come from the same Zenodo record. The methodology for producing them is
-described in the accompanying Scientific Data article; the DOI and citation
-details are in `docs/DATA_NOTES.md`.
+Built with 3D Slicer, SimpleITK, scikit-image, and TotalSegmentator
+(academic licence). Tool citations are in `CITATION.cff`.
 
-**Tools.** [3D Slicer](https://www.slicer.org/) for inspection and manual
-landmark placement; [SimpleITK](https://simpleitk.org/) for volume I/O;
-[scikit-image](https://scikit-image.org/) for marching cubes;
-[TotalSegmentator](https://github.com/wasserth/TotalSegmentator) as a
-comparison segmentation method, used under its academic licence (free for
-non-commercial use). TotalSegmentator is built on
-[nnU-Net](https://github.com/MIC-DKFZ/nnUNet); if you reuse its output,
-cite both.
+## Licence
 
-**How to cite the data.** The dataset is licensed under CC BY-NC-SA 4.0,
-which requires attribution, forbids commercial use, and requires any
-derived work to keep the same licence. The exact citation text to use is
-given in the Zenodo record's "Cite as" section, not here — copy it from
-the record, not from this README.
+Code is MIT-licensed (see `LICENSE`). Data uses are governed by their own
+licences (see `docs/data.md`); the MIT licence does not cover the data.

@@ -53,8 +53,8 @@ Expected:
 `PYTHONPATH` prefix is needed for pytest.
 
 If a test fails, the output names the file and line of the failed assertion.
-Do not change the test to match the code; change the code, or add an entry to
-`docs/DECISIONS.md` explaining why the expected value was wrong.
+Do not change the test to match the code; change the code, or add an entry
+to `docs/decisions.md` explaining why the expected value was wrong.
 
 
 ## Statistics summary tool
@@ -433,9 +433,9 @@ the script ends with:
     clean checkout: all checks passed
 
 Run this before trusting any commit: a file that exists in your working tree
-but was never committed is invisible here. That is the point. The four failure
-modes and their meaning are documented in `docs/INVENTORY.md` under
-`scripts/clean_check.sh`.
+but was never committed is invisible here. That is the point. The four checks
+(pytest, CLI, docker build, docker run) fail in the ways documented at the top
+of `scripts/clean_check.sh`.
 
 ## Writing a geometry result to a folder
 
@@ -475,7 +475,7 @@ pipeline reads one combined multi-label NIfTI on the full-limb grid.
 3. Open the Segment Editor. For each segmentation, set the **Source
    volume** to the full-limb volume.
 4. Renumber labels so femur and tibia have distinct values; record the
-   mapping in `DATA_NOTES.md`.
+   mapping in `docs/data.md`.
 5. Right-click the segmentation node in the Data module ->
    `Export to file` -> select `NIfTI (.nii.gz)`. Save to
    `data/raw/case01/combined_seg.nii.gz` (gitignored).

@@ -9,7 +9,7 @@ edge carries the data that flows across it.
 Sections are **added at the top and never removed or edited**. If the code
 changes shape later, the older diagram is still accurate for its point in
 time; the current shape is the topmost section. This mirrors the
-append-only convention of `DECISIONS.md`.
+append-only convention of `decisions.md`.
 
 Diagrams supplement the tests, they do not replace them. The tests under
 `tests/` are the source of truth for behaviour; a diagram is a summary
