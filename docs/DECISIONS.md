@@ -17,7 +17,9 @@ Entries are numbered; new ones go at the top. Every entry has the same four part
 single multi-label NIfTI, produced in 3D Slicer by loading the
 `Shanks-Feet` and `Thighs_Reconstruction` segmentations onto the full-limb
 volume (`_1`), renumbering the labels so femur and tibia have distinct
-values, and exporting to one `.nii.gz` on `_1`'s grid.
+values, and exporting to one `.nii.gz` on `_1`'s grid. The source is
+Zenodo record 8302449 (VSDFullBodyBoneReconstruction), licence CC BY-NC-SA
+4.0 International, read on the record page on 26 October 2026.
 
 **Alternative rejected:** (a) Use the two `.seg` files directly in Python.
 (b) Use only one segmentation (femur-only path).
@@ -37,7 +39,9 @@ source `.seg` files stay in `data/raw/` as the original record but are not
 read by any project code. Label numbering (femur=1, tibia=2, and so on) is
 recorded in `DATA_NOTES.md` and in the export step of the runbook. If a
 second subject is added later (stretch item S1), the same combined-export
-step is repeated, not the split-file load.
+step is repeated, not the split-file load. Licence must be checked again
+on the day the data are used, in case the record's terms change.
+
 
 ## D024: environment record written by code, as JSON
 

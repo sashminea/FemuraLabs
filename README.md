@@ -2,9 +2,20 @@
 
 A research prototype for lower-limb CT analysis: segment femur and tibia
 from CT, build 3D meshes, place anatomical landmarks, and compute
-mechanical axes and alignment angles.
+mechanical axes and alignment angles. Development uses the public
+**VSDFullBodyBoneReconstruction** dataset (segmentations and surface
+models of pelvis and lower-limb bones, made from a public postmortem CT
+collection; see `docs/DATA_NOTES.md`). No patient data is included or
+required.
 
 <img width="2873" height="852" alt="FemuraLabs Banner" src="https://github.com/user-attachments/assets/41d18b7f-2fb5-4f52-b184-500358c6faa7" />
+
+![3D Slicer: lower-limb CT with femur and tibia segmentations loaded](docs/img/case01_overview.png)
+
+*VSDFullBodyBoneReconstruction, subject 006 loaded in 3D Slicer:
+lower-limb CT with the reference femur and tibia segmentations. The femur
+comes from the thighs reconstruction, the tibia from the shanks-feet
+segmentation; see `docs/DATA_NOTES.md` for how the two are combined.*
 
 ## What it does (eventually)
 
@@ -132,3 +143,33 @@ decimal on GPU, where floating point addition order differs between
 kernels). `scripts/compare_runs.py` reports the largest gap, and
 `femuralabs.toolkit.decision.verdict` turns repeated-seed scores into a
 three-way verdict (`supported` / `inconclusive` / `not supported`).
+
+## Data and tools
+
+**Data.** [VSDFullBodyBoneReconstruction](https://zenodo.org/records/8302449)
+— segmentations and surface models of pelvis and lower-limb bones, derived
+from a public postmortem CT collection. Licence: Creative Commons
+Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0).
+The source CT collection is on Zenodo at record 8270365. Data are not
+committed to this repository; see `docs/DATA_NOTES.md` for the download
+procedure and the combined-segmentation step.
+
+**Reference segmentations.** The femur and tibia masks used for validation
+come from the same Zenodo record. The methodology for producing them is
+described in the accompanying Scientific Data article; the DOI and citation
+details are in `docs/DATA_NOTES.md`.
+
+**Tools.** [3D Slicer](https://www.slicer.org/) for inspection and manual
+landmark placement; [SimpleITK](https://simpleitk.org/) for volume I/O;
+[scikit-image](https://scikit-image.org/) for marching cubes;
+[TotalSegmentator](https://github.com/wasserth/TotalSegmentator) as a
+comparison segmentation method, used under its academic licence (free for
+non-commercial use). TotalSegmentator is built on
+[nnU-Net](https://github.com/MIC-DKFZ/nnUNet); if you reuse its output,
+cite both.
+
+**How to cite the data.** The dataset is licensed under CC BY-NC-SA 4.0,
+which requires attribution, forbids commercial use, and requires any
+derived work to keep the same licence. The exact citation text to use is
+given in the Zenodo record's "Cite as" section, not here — copy it from
+the record, not from this README.

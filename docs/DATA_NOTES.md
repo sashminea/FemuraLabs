@@ -31,3 +31,43 @@ right will be swapped.
 **Decision.** Full path (not femur-only). Femur and tibia masks for the
 pipeline come from a single combined multi-label NIfTI produced in Slicer
 on `_1`'s grid. See D025.
+
+## References
+
+### Dataset
+
+- **VSDFullBodyBoneReconstruction** — segmentations and surface models of
+  pelvis and lower-limb bones. Zenodo record: <https://zenodo.org/records/8302449>.
+  DOI: 10.5281/zenodo.8302449. Licence: CC BY-NC-SA 4.0 International.
+- **Source CT collection** — anonymised postmortem whole-body CT from
+  which the segmentations were derived. Zenodo record: <https://zenodo.org/records/8270365>.
+  Licence: <read from the record page and paste the exact name here — do
+  not assume it matches the segmentation record's licence>. The record
+  warns of duplicate datasets and lists four near-empty placeholder files
+  (~142–144 bytes); avoid those when downloading a subject.
+
+### Methodology
+
+- **Scientific Data (2023)** — the article describing how the reference
+  segmentations and surface models were produced. DOI:
+  `10.1038/s41597-023-02669-z`. Verify the exact author list, volume and
+  pages on the publisher's page before citing in a report.
+
+### Tools
+
+- **3D Slicer** — <https://www.slicer.org/>. Used for inspection and
+  manual landmark placement. Slicer shows world coordinates in RAS;
+  SimpleITK uses LPS. This is documented in the Direction matrix note
+  above and handled in `T1`.
+- **SimpleITK** — <https://simpleitk.org/>. Volume I/O; reads NRRD;
+  writes NIfTI.
+- **scikit-image** — <https://scikit-image.org/>. `measure.marching_cubes`
+  for mesh extraction.
+- **TotalSegmentator** — <https://github.com/wasserth/TotalSegmentator>.
+  Comparison segmentation method. Used under the academic licence (free
+  for non-commercial use); the licence number was obtained from
+  <https://backend.totalsegmentator.com/license-academic/> and is stored
+  in the tool's own configuration (`~/.totalsegmentator/`), not in this
+  repository and not in any screenshot.
+- **nnU-Net** — <https://github.com/MIC-DKFZ/nnUNet>. TotalSegmentator is
+  built on it; cite both if reusing its output.

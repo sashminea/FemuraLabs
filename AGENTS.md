@@ -158,6 +158,15 @@ commit.
 `docs/flow/*.png` — the rendered images referenced from `docs/FLOW.md`.
 Committed, never hand-edited; edit the JSON spec and re-run the script.
 
+**References.** Every external source a decision depends on (a dataset, a
+paper, a tool, a licence) is cited in `docs/DATA_NOTES.md` under
+References, with the URL, DOI or Zenodo record ID, and the licence name
+exactly as the source states it. Never cite record A's licence based on
+record B; read each licence from its own page. Every README that names the
+dataset also names its licence and points to the record's own "Cite as"
+block, rather than reproducing the citation text — a local copy drifts
+when the record is updated.
+
 
 ## Working protocol
 
