@@ -26,7 +26,7 @@
 ## Data pipeline (planned)
 
     Input volume (NRRD/NIfTI)
-      -> load_volume (SimpleITK), write NIfTI          [io_volume.py  - pending]
+      -> load_volume (SimpleITK), write NIfTI          [io_volume.py  - done]
       -> extract femur/tibia masks                     [masks.py      - pending]
       -> mesh per bone (marching cubes, mm)            [mesh.py       - pending]
       -> landmarks (hip, knee, ankle)                  [landmarks.py  - pending]
@@ -43,6 +43,10 @@ sprint plan for what triggers each file.
       -> make_volume (zeros) -> describe -> CLI prints geometry
       -> write_info -> save_json -> info.json
       -> HTTP service: /health, /info (reads REPORT_FOLDER/info.json if present)
+    
+    combined_seg.nii
+      -> load_volume -> Volume(array, spacing, origin, direction)
+      -> save_nifti -> round trip preserves geometry
 
 ## Where each fact lives
 

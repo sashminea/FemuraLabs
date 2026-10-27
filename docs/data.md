@@ -137,3 +137,8 @@ segmentations". Summary:
   pipeline uses `.nii` by default because it saves a decompression step
   on every read; switch a file to `.nii.gz` by renaming the output path
   in the `WriteImage` call, no code change needed.
+- **Slicer shows RAS, SimpleITK shows LPS.** For `combined_seg.nii`,
+  Slicer's "Volume Information" reports origin (249.5, 392.5, 119.7);
+  SimpleITK returns (−249.5, −392.5, 119.7). Same point, x and y
+  negated. `docs/runbook.md`'s load_volume check reports the LPS form;
+  do not "fix" the sign by comparing against Slicer.

@@ -602,3 +602,27 @@ Apply, then save the output as NIfTI.
   factor of 0.98.
 - Do not commit `combined_seg.nii`. It is derived data; `data/` is
   gitignored.
+
+## Verifying a volume's geometry
+
+Reads a file with `io_volume.load_volume`, prints the array shape and
+the three geometry fields. The array shape is `(z, y, x)`; the three
+geometry fields are `(x, y, z)`. Comparing the two lines is the fastest
+way to confirm the file's geometry is not swapped.
+
+    PYTHONPATH=src python -c "from femuralabs.toolkit.io_volume import load_volume; \
+      v = load_volume('data/raw/case01/combined_seg.nii'); \
+      print(v.array.shape, v.spacing, v.origin)"
+
+Expected on case 01:
+
+    (1637, 512, 512) (0.9765625, 0.9765625, 0.6997554898262024) (-249.51171875, -392.51171875, 119.69999694824219)
+
+The array shape is the reverse of `GetSize()`'s `(512, 512, 1637)`. The
+origin is negated in x and y relative to what Slicer shows because
+SimpleITK reports in LPS and Slicer in RAS. Both are correct.
+
+If the array shape comes back as `(512, 512, 1637)`, the file was read
+through a tool that returns `(x, y, z)` order; do not call that a fix.
+The `io_volume` contract is `(z, y, x)` for the array, and
+`tests/test_io_volume.py::test_real_file_array_shape` pins it.
