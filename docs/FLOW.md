@@ -25,6 +25,21 @@ white-dashed = file on disk, grey = external.
 
 ---
 
+<!-- INSERT HERE -->
+
+
+---
+
+
+## Volume I/O: read with geometry, save with geometry
+
+<img src="flow/volume-io-load-and-save.png" alt="Volume I/O: read with geometry, save with geometry">
+
+load_volume calls sitk.ReadImage, then extracts the array plus the three geometry fields (spacing, origin, direction) into a Volume dataclass. The array is (z, y, x); the three geometry fields are (x, y, z), which is why the dataclass is the contract that pins the reversal. save_nifti rebuilds a SimpleITK image, re-applies the three fields, and writes NIfTI — without the three re-application calls, the file would carry default geometry (spacing 1 mm, origin 0, identity direction) and every downstream mesh would be wrong by the wrong scale.
+
+
+---
+
 ## Verdict from per-seed metrics
 
 <img src="flow/verdict-three-way.png" alt="Verdict from per-seed metrics">
@@ -33,15 +48,6 @@ Each variant is trained three times, one seed per run. Each run folder records t
 
 ---
 
-## Volume I/O: read with geometry, save with geometry
-
-<img src="flow/volume-io-load-and-save.png" alt="Volume I/O: read with geometry, save with geometry">
-
-load_volume calls sitk.ReadImage, then extracts the array plus the three geometry fields (spacing, origin, direction) into a Volume dataclass. The array is (z, y, x); the three geometry fields are (x, y, z), which is why the dataclass is the contract that pins the reversal. save_nifti rebuilds a SimpleITK image, re-applies the three fields, and writes NIfTI — without the three re-application calls, the file would carry default geometry (spacing 1 mm, origin 0, identity direction) and every downstream mesh would be wrong by the wrong scale.
-
----
-
-<!-- INSERT HERE -->
 
 ## Compose: api and web on one network
 
