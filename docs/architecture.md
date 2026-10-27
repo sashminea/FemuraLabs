@@ -26,8 +26,8 @@
 ## Data pipeline (planned)
 
     Input volume (NRRD/NIfTI)
-      -> load_volume (SimpleITK), write NIfTI          [io_volume.py  - done]
-      -> extract femur/tibia masks                     [masks.py      - pending]
+      -> load_volume (SimpleITK), write NIfTI          [io_volume.py]
+      -> extract femur/tibia masks                     [masks.py]
       -> mesh per bone (marching cubes, mm)            [mesh.py       - pending]
       -> landmarks (hip, knee, ankle)                  [landmarks.py  - pending]
       -> alignment angles (HKA, mLDFA, MPTA)           [alignment.py  - pending]
@@ -44,9 +44,10 @@ sprint plan for what triggers each file.
       -> write_info -> save_json -> info.json
       -> HTTP service: /health, /info (reads REPORT_FOLDER/info.json if present)
     
-    combined_seg.nii
+    combined_seg.nii (labels 1=ferur_R, 2=femur_L, 3=tibia_R, 4=tibia_L)
       -> load_volume -> Volume(array, spacing, origin, direction)
       -> save_nifti -> round trip preserves geometry
+      -> extract_masks -> BoneMask per bone (mask, count, mL, centroid_world)
 
 ## Where each fact lives
 

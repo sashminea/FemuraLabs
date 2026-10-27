@@ -626,3 +626,36 @@ If the array shape comes back as `(512, 512, 1637)`, the file was read
 through a tool that returns `(x, y, z)` order; do not call that a fix.
 The `io_volume` contract is `(z, y, x)` for the array, and
 `tests/test_io_volume.py::test_real_file_array_shape` pins it.
+
+## Extracting per-bone masks from the combined segmentation
+
+Reads `combined_seg.nii` and produces one `BoneMask` per bone, each
+carrying a boolean mask, voxel count, volume in mL, and centroid in LPS
+world coordinates.
+
+    PYTHONPATH=src python -c "from femuralabs.toolkit.io_volume import load_volume; \
+      from femuralabs.toolkit.masks import extract_masks; \
+      m = extract_masks(load_volume('data/raw/case01/combined_seg.nii')); \
+      [print(f'{b.name:<8} {b.voxel_count:>10}  {b.volume_ml:>8.1f} mL  x={b.centroid_world[0]:>9.1f} y={b.centroid_world[1]:>9.1f} z={b.centroid_world[2]:>9.1f}') for b in m.values()]"
+
+Expected on case 01:
+
+    femur_R      496845     331.6 mL  x=    -83.5 y=   -129.9 z=    870.7
+    femur_L      452747     302.1 mL  x=    101.0 y=   -131.6 z=    894.4
+    tibia_R      307340     205.1 mL  x=    -59.8 y=    -96.3 z=    493.8
+    tibia_L      287692     192.0 mL  x=     87.5 y=    -99.3 z=    510.0
+
+Sanity checks on any new subject:
+
+- Femur volumes in the 250-400 mL range for an adult cadaver; tibia
+  150-250 mL. A value an order of magnitude off means spacing was read
+  in the wrong axis order.
+- `femur_L.x > femur_R.x` and `tibia_L.x > tibia_R.x`. In LPS the
+  patient's left is +x; a swapped sign means the direction matrix was
+  not applied or the (z, y, x) to (x, y, z) reorder was missed.
+- Femurs have a higher z (proximal) than tibias (distal). They are
+  separated by roughly 300-450 mm on a full lower-limb scan.
+
+`tests/test_masks.py` pins all three checks against the real file, so
+the command above is for inspection, not verification. Run
+`pytest tests/test_masks.py -v` for the actual check.

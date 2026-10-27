@@ -23,9 +23,18 @@ command.
 Node colours: blue = module, green = script, yellow = CLI entry point,
 white-dashed = file on disk, grey = external.
 
+
 ---
 
 <!-- INSERT HERE -->
+
+---
+
+## Extract per-bone masks, volumes and centroids
+
+<img src="flow/masks-extract.png" alt="Extract per-bone masks, volumes and centroids">
+
+extract_masks walks the four label values written by the merge step (femur_R=1, femur_L=2, tibia_R=3, tibia_L=4) and returns a BoneMask per label containing a boolean mask, voxel count, volume in mL, and centroid in world coordinates. The centroid is the mean of the bone's voxel indices reordered from (z, y, x) to (x, y, z), then mapped with the same affine as load_volume carries: world = origin + direction @ (spacing * index). The reorder and the direction multiply are what make left/right signs correct in LPS; dropping either flips the femurs without raising an error, and tests/test_masks.py::test_left_right_are_on_correct_sides catches it.
 
 
 ---
