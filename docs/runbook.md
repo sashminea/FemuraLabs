@@ -754,3 +754,36 @@ fix is the same `binary_fill_holes` call.
 `tests/test_mesh.py` pins all three checks against the real file; run
 `pytest tests/test_mesh.py -v` for the actual verification. The command
 above is for inspection, not validation.
+
+## Running the pipeline on one case
+
+Reads a combined segmentation, extracts the four bones, meshes them,
+writes four STLs and one JSON summary. Deterministic: same input, same
+JSON.
+
+    PYTHONPATH=src python scripts/pipeline_demo.py \
+      --case data/raw/case01/combined_seg.nii \
+      --out output/case01
+
+Expected (vertex counts approximate):
+
+    wrote output/case01/summary.json
+      femur_R    277167 verts   331.60 mL
+      femur_L     ~250k verts   302.10 mL
+      tibia_R     ~150k verts   205.10 mL
+      tibia_L     ~140k verts   192.00 mL
+
+Then inspect the JSON:
+
+    cat output/case01/summary.json
+
+The `size` field is `[x, y, z]`, matching SimpleITK's `GetSize()`, not the
+array's `(z, y, x)`. `bbox_mm` is `null` for an absent bone, not a point
+at the origin. `output/` is gitignored; nothing here is committed.
+
+Pass the `--name` flag to override the case name in the JSON if the case
+file lives outside its own subject folder.
+
+`tests/test_pipeline_demo.py` pins the schema and determinism on a
+synthetic volume; run `pytest tests/test_pipeline_demo.py -v` for the
+check.

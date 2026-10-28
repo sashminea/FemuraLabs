@@ -25,6 +25,14 @@ white-dashed = file on disk, grey = external.
 
 ---
 
+## Pipeline demo: one command runs the three modules
+
+<img src="flow/pipeline-demo.png" alt="Pipeline demo: one command runs the three modules">
+
+pipeline_demo.py is orchestration, not new logic. It calls load_volume on the combined segmentation, passes the Volume to extract_masks for the four labels, then for each BoneMask calls mask_to_mesh and save_stl. Empty masks (a bone the segmentation missed) produce empty verts and faces, the STL is skipped, and the JSON records null for the bounding box instead of a point at the origin. The JSON summary is deterministic — same input file, same output bytes — which is what tests/test_pipeline_demo.py::test_pipeline_is_deterministic pins.
+
+---
+
 <!-- INSERT HERE -->
 
 
