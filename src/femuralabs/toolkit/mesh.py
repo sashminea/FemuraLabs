@@ -25,7 +25,7 @@ def mask_to_mesh(
     # skimage expects spacing in array-axis order; array is (z, y, x).
     sz, sy, sx = spacing[2], spacing[1], spacing[0]
     verts_zyx, faces, _, _ = measure.marching_cubes(
-        padded, level=0.5, spacing=(sz, sy, sx), allow_degenerate=False,
+        padded, level=0.5, spacing=(sz, sy, sx),
     )
     # Undo the 1-voxel padding that was added above.
     verts_zyx -= np.array([sz, sy, sx])
@@ -54,3 +54,62 @@ def save_stl(path: Path | str, verts: np.ndarray, faces: np.ndarray) -> None:
             f.write("    endloop\n")
             f.write("  endfacet\n")
         f.write("endsolid mesh\n")
+
+def signed_volume(verts: np.ndarray, faces: np.ndarray) -> float:
+    """Signed volume of a closed mesh, in the units of verts cubed.
+
+    Sum of tetrahedron volumes from the origin. Positive for an
+    outward-wound closed mesh; the absolute value is the physical volume.
+    """
+    v0 = verts[faces[:, 0]]
+    v1 = verts[faces[:, 1]]
+    v2 = verts[faces[:, 2]]
+    return float(np.sum(v0 * np.cross(v1, v2)) / 6.0)
+
+
+def edge_incidence(verts: np.ndarray, faces: np.ndarray) -> dict[str, int]:
+    """Count edges by number of faces sharing them.
+
+    A marching-cubes mesh is closed (every edge shared by 2 faces) in the
+    ideal case. In practice, skimage's algorithm produces a handful of
+    non-manifold edges (count 3) where two surface patches touch at an
+    edge. The signed volume stays well-defined as long as boundary edges
+    (count 1) are zero.
+    """
+    edges = np.sort(
+        np.concatenate([faces[:, [0, 1]], faces[:, [1, 2]], faces[:, [2, 0]]]),
+        axis=1,
+    )
+    keys = edges[:, 0].astype(np.int64) * len(verts) + edges[:, 1].astype(np.int64)
+    _, counts = np.unique(keys, return_counts=True)
+    return {
+        "boundary": int((counts == 1).sum()),
+        "manifold": int((counts == 2).sum()),
+        "non_manifold": int((counts >= 3).sum()),
+    }
+
+
+def is_watertight(verts: np.ndarray, faces: np.ndarray, tol: float = 0.001) -> bool:
+    """True if the mesh has no open boundary and only negligible
+    non-manifold edges (fewer than tol fraction of faces)."""
+    counts = edge_incidence(verts, faces)
+    return (
+        counts["boundary"] == 0
+        and counts["non_manifold"] / max(len(faces), 1) < tol
+    )
+
+
+def read_stl_vertices(path: Path | str) -> np.ndarray:
+    """Parse an ASCII STL and return all vertex positions as (N, 3).
+
+    Every face contributes 3 vertices, so N == 3 * n_faces. Duplicated
+    vertices at shared corners are kept, because the STL format does not
+    share them.
+    """
+    verts = []
+    with open(str(path)) as f:
+        for line in f:
+            parts = line.strip().split()
+            if len(parts) == 4 and parts[0] == "vertex":
+                verts.append([float(parts[1]), float(parts[2]), float(parts[3])])
+    return np.array(verts)
