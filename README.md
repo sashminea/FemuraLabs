@@ -9,13 +9,6 @@ see `docs/data.md`). No patient data is included or required.
 
 <img width="2873" height="852" alt="FemuraLabs Banner" src="https://github.com/user-attachments/assets/41d18b7f-2fb5-4f52-b184-500358c6faa7" />
 
-![3D Slicer: lower-limb CT with femur and tibia segmentations loaded](docs/img/case01_overview.png)
-
-*Case 01 (VSDFullBodyBoneReconstruction, subject 006) loaded in 3D Slicer:
-lower-limb CT with the reference femur and tibia segmentations. The femur
-comes from the thighs reconstruction, the tibia from the shanks-feet
-segmentation; see `docs/data.md` for how the two are combined.*
-
 ## What it does (eventually)
 
 - Read and preprocess DICOM and NIfTI volumes with correct geometry
