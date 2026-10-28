@@ -19,7 +19,7 @@ see `docs/data.md`). No patient data is included or required.
 - Simulate a simple osteotomy wedge
 - Produce a validation report
 
-Right now it contains four pieces of foundation:
+Right now it contains five pieces of foundation:
 
 - **Array toolkit.** NumPy helpers for holding images in arrays: a `.npy`
   summary CLI, per-volume z-score normalisation, a linear Hounsfield-unit
@@ -38,6 +38,11 @@ Right now it contains four pieces of foundation:
   a non-root user on CPU, and a `docker-compose.yml` that starts an HTTP
   service and a static page together on one private network. Data mounted
   read-only, results writable, image holds neither folder.
+- **CT pipeline.** `scripts/pipeline_demo.py` runs the whole chain on one
+  case: load a combined segmentation, extract per-bone masks, build a
+  triangle mesh per bone, write four STLs and a JSON summary. Deterministic
+  (same input, same JSON); the four labelled bones are femur_R, femur_L,
+  tibia_R, tibia_L with volumes in mL and centroids in millimetres.
 
 ## Quick start
 
@@ -55,7 +60,7 @@ Right now it contains four pieces of foundation:
 no NVIDIA GPU, replace the torch line in `requirements.txt` with the CPU
 build from https://pytorch.org/get-started/locally and reinstall.
 
-### The three things to try first
+### The four things to try first
 
     # 1. Tests
     pytest -q
@@ -68,6 +73,10 @@ build from https://pytorch.org/get-started/locally and reinstall.
     curl http://localhost:8000/health
     docker compose down
 
+    # 4. The pipeline on one case — writes four STLs and summary.json
+    PYTHONPATH=src python scripts/pipeline_demo.py \
+      --case data/raw/case01/combined_seg.nii --out output/case01
+
 The full list of commands — mounting data in and results out, summarising a
 saved `.npy`, training the small CNN, comparing two runs — is in
 `docs/runbook.md`, with expected output and failure modes.
@@ -75,7 +84,7 @@ saved `.npy`, training the small CNN, comparing two runs — is in
 ## Documentation
 
 - `docs/runbook.md` — every command that has been run, with expected
-  output and failure modes.
+  output and failure modes including the CT pipeline, mesh verification, and the data merge.
 - `docs/decisions.md` — architectural choices, with the alternative
   rejected and the reason.
 - `docs/architecture.md` — folder map and pipeline stages.
