@@ -659,3 +659,40 @@ Sanity checks on any new subject:
 `tests/test_masks.py` pins all three checks against the real file, so
 the command above is for inspection, not verification. Run
 `pytest tests/test_masks.py -v` for the actual check.
+
+## Producing an STL mesh from a mask
+
+Reads the combined segmentation, extracts one bone, builds the mesh in
+world millimetres, and writes an STL.
+
+    PYTHONPATH=src python -c "from femuralabs.toolkit.io_volume import load_volume; \
+      from femuralabs.toolkit.masks import extract_masks; \
+      from femuralabs.toolkit.mesh import mask_to_mesh, save_stl; \
+      v = load_volume('data/raw/case01/combined_seg.nii'); \
+      m = extract_masks(v)['femur_R']; \
+      verts, faces = mask_to_mesh(m.mask, v.spacing, v.origin, v.direction); \
+      save_stl('data/raw/case01/femur_R.stl', verts, faces); \
+      print(len(verts), 'verts', len(faces), 'faces', 'bbox', verts.min(0).round(1), verts.max(0).round(1))"
+
+Expected on case 01:
+
+    277167 verts 560642 faces bbox [-130.9 -170.3  658.2] [ -20.5  -76.6 1108.8]
+
+Sanity checks on any new subject:
+
+- `bbox` x should straddle the femur's centroid x. On this file the
+  centroid is -83.5 and the bbox is [-130.9, -20.5]. Positive x means
+  the direction matrix was dropped.
+- `bbox` z spans about 400-500 mm on a femur at full-limb scale.
+- The mesh opens in Slicer over the CT and sits on the bone, not at the
+  origin.
+
+**The ASCII STL is large** — 560,642 faces is roughly 110 MB. Do not
+commit it; it lives in `data/` which is gitignored. Decimation in a later
+task reduces the face count to 10-20 percent without visible loss at
+clinical scales.
+
+`tests/test_mesh.py::test_femur_mesh_is_near_mask_centroid` pins the
+direction-matrix check by comparing the mesh centroid with the mask
+centroid within 20 mm; run `pytest tests/test_mesh.py -v` for the
+verification.

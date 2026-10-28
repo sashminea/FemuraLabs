@@ -23,10 +23,18 @@ command.
 Node colours: blue = module, green = script, yellow = CLI entry point,
 white-dashed = file on disk, grey = external.
 
-
 ---
 
 <!-- INSERT HERE -->
+
+
+---
+
+## Mask to mesh: marching cubes and world-space transform
+
+<img src="flow/mesh-mask-to-stl.png" alt="Mask to mesh: marching cubes and world-space transform">
+
+mask_to_mesh pads the boolean mask with a one-voxel zero border so the surface closes at the mask boundary, then calls skimage's marching cubes at level 0.5 (the midpoint between 0 and 1, which is where the surface lies for a boolean mask) with spacing passed through so vertices come out in millimetre units. The vertices are returned in (z, y, x) order to match the array; reversing the columns gives (x, y, z) to match the spacing, origin and direction. Applying `verts_xyz @ D.T + origin` maps them into LPS world coordinates, which is what places the mesh on the CT in Slicer. Dropping either the reorder or the direction multiply leaves the mesh at the origin in the wrong orientation, and tests/test_mesh.py::test_femur_mesh_is_near_mask_centroid catches it by comparing the mesh centroid with the mask centroid.
 
 ---
 

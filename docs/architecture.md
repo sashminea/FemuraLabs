@@ -28,7 +28,7 @@
     Input volume (NRRD/NIfTI)
       -> load_volume (SimpleITK), write NIfTI          [io_volume.py]
       -> extract femur/tibia masks                     [masks.py]
-      -> mesh per bone (marching cubes, mm)            [mesh.py       - pending]
+      -> mesh per bone (marching cubes, mm)            [mesh.py]
       -> landmarks (hip, knee, ankle)                  [landmarks.py  - pending]
       -> alignment angles (HKA, mLDFA, MPTA)           [alignment.py  - pending]
       -> comparison with TotalSegmentator              [metrics.py    - pending]
