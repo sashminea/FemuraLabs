@@ -86,7 +86,7 @@ def test_signed_volume_on_explicit_cube():
     assert counts["boundary"] == 0, f"open boundary: {counts}"
     assert counts["non_manifold"] == 0, f"non-manifold: {counts}"
     assert abs(signed_volume(verts, faces)) == pytest.approx(125.0, rel=1e-6)
-    
+
 def test_real_femur_mesh_volume_close_to_voxel_volume(real_case):
     """Mesh is closed (boundary edges = 0), volume within 10% of voxel count."""
     volume, masks = real_case
@@ -117,3 +117,13 @@ def test_stl_round_trip_preserves_bounding_box(tmp_path):
     assert len(verts_read) == len(faces) * 3
     assert np.allclose(verts_read.min(axis=0), verts.min(axis=0), atol=1e-5)
     assert np.allclose(verts_read.max(axis=0), verts.max(axis=0), atol=1e-5)
+
+def test_empty_mask_returns_empty_mesh():
+    """An all-False mask has no surface; the function returns empty arrays."""
+    mask = np.zeros((10, 10, 10), dtype=bool)
+    verts, faces = mask_to_mesh(
+        mask, (1.0, 1.0, 1.0), (0.0, 0.0, 0.0),
+        (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0),
+    )
+    assert len(verts) == 0
+    assert len(faces) == 0

@@ -10,6 +10,83 @@ New entries go at the top.
 
 ---
 
+## D028: `is_watertight` tolerates a small fraction of non-manifold edges
+
+**Decision:** `is_watertight(verts, faces, tol=0.001)` returns True if the
+mesh has zero boundary edges (count-1 edges) and non-manifold edges
+(count-3+ edges) are fewer than 0.1 percent of total faces.
+
+**Alternative rejected:** Exact check — every edge shared by exactly two
+faces.
+
+**Reason:** skimage's marching cubes with `allow_degenerate=True` (the
+default) produces a handful of non-manifold edges where two surface
+patches touch at an edge. On case01's right femur: 0 boundary edges,
+6 non-manifold edges, 560,642 faces — 0.0007 percent. Exact count-2
+would fail this mesh even though it is closed and volume-computable,
+and removing the degenerate triangles (via `allow_degenerate=False`)
+opens the mesh elsewhere. The realistic property is closure plus
+negligible non-manifoldness, not exactness.
+
+**Consequence:** `edge_incidence(verts, faces)` returns the three counts
+(boundary, manifold, non-manifold) and is exposed for diagnostics. The
+boolean wrapper is a convenience. A test that asserts `boundary == 0` and
+`non_manifold / faces < 0.001` is the correct assertion for a real mesh;
+asserting `counts["manifold"] == len(edges)` is not.
+
+
+## D027: `mask_to_mesh` keeps degenerate triangles
+
+**Decision:** `mask_to_mesh` calls `measure.marching_cubes` with the
+default `allow_degenerate=True`.
+
+**Alternative rejected:** `allow_degenerate=False`, which removes
+zero-area triangles produced where two surface patches meet at an edge.
+
+**Reason:** Zero-area triangles contribute no volume or area, but they do
+contribute topology: they keep the surface closed at every edge. Removing
+them opens the mesh at the exact points where two patches touch. On
+case01's right femur, `allow_degenerate=False` produced a mesh with
+non-zero boundary edges (open) and `allow_degenerate=True` produced a
+closed mesh with 6 non-manifold edges out of 840,957. Closed with 0.0007
+percent non-manifold is preferred over open.
+
+**Consequence:** Downstream code that computes volume, area, or boolean
+operations must tolerate the presence of degenerate triangles. `signed_volume`
+and `edge_incidence` in `mesh.py` do. If a future operation cannot, it
+must filter them explicitly and document why.
+
+
+## D026: `io_volume.Volume` has array in (z, y, x), geometry in (x, y, z)
+
+**Decision:** The `Volume` dataclass returned by `load_volume` has
+`array` in numpy's (z, y, x) order (matching `GetArrayFromImage`), while
+`spacing`, `origin` and `direction` are in SimpleITK's (x, y, z) order
+(matching `GetSpacing`, `GetOrigin`, `GetDirection`). The dataclass is
+the contract: any function that converts between array and world
+coordinates must reorder the array indices.
+
+**Alternative rejected:** Return the array in (x, y, z) order by
+transposing, so that array and geometry share one axis order.
+
+**Reason:** SimpleITK's API returns these two forms; converting at the
+boundary would either (a) slow every call with a transpose of a
+512 × 512 × 1637 array (about 400 MB per copy) or (b) require calling code
+to know whether the transpose has been applied. Keeping both in the
+order SimpleITK gives them makes the contract one sentence long
+("array is (z, y, x); geometry is (x, y, z)") and every downstream
+function is responsible for the reorder once. The reorder is a
+`verts[:, ::-1]` in `mask_to_mesh` and a `[x_i, y_i, z_i]` assignment in
+`masks.extract_masks` — one line each, tested.
+
+**Consequence:** `tests/test_io_volume.py::test_real_file_array_shape`
+pins the contract by asserting `array.shape == (1637, 512, 512)` for a
+file whose `GetSize()` is `(512, 512, 1637)`. Any future "fix" that
+transposes the array will fail this test. The world-coordinate conversions
+in `masks.py` and `mesh.py` both go through the same affine
+(`origin + direction @ (spacing * index)`); if the axis order gets
+swapped anywhere, the affected test fails.
+
 ## D025: combine the two reference segmentations into one multi-label NIfTI
 
 **Decision:** Femur and tibia masks come from one multi-label NIfTI produced

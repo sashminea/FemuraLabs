@@ -20,6 +20,11 @@ def mask_to_mesh(
     row-major, as SimpleITK returns it.
     Returns (verts_world, faces): verts (N, 3) in LPS mm, faces (F, 3) int.
     """
+    if not np.any(mask):
+        # An absent bone produces no surface. Returning empty arrays lets
+        # the caller skip it without a crash; a caller that expects a mesh
+        # can check len(verts) == 0.
+        return np.empty((0, 3), dtype=float), np.empty((0, 3), dtype=int)    
     padded = np.pad(mask.astype(np.float32), 1, mode="constant", constant_values=0.0)
 
     # skimage expects spacing in array-axis order; array is (z, y, x).

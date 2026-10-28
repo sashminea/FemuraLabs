@@ -696,3 +696,61 @@ clinical scales.
 direction-matrix check by comparing the mesh centroid with the mask
 centroid within 20 mm; run `pytest tests/test_mesh.py -v` for the
 verification.
+
+## Verifying a mesh
+
+Reads the combined segmentation, extracts the right femur, builds the mesh,
+and prints the edge counts and volume side by side.
+
+    PYTHONPATH=src python - <<'PY'
+    import numpy as np
+    from femuralabs.toolkit.io_volume import load_volume
+    from femuralabs.toolkit.masks import extract_masks
+    from femuralabs.toolkit.mesh import mask_to_mesh, signed_volume, edge_incidence
+
+    v = load_volume('data/raw/case01/combined_seg.nii')
+    m = extract_masks(v)['femur_R']
+    verts, faces = mask_to_mesh(m.mask, v.spacing, v.origin, v.direction)
+    counts = edge_incidence(verts, faces)
+    print('boundary edges:', counts['boundary'])
+    print('manifold edges:', counts['manifold'])
+    print('non-manifold edges:', counts['non_manifold'])
+    print('mesh volume (mm^3):', round(abs(signed_volume(verts, faces)), 1))
+    print('voxel volume (mm^3):', round(m.volume_ml * 1000, 1))
+    PY
+
+Expected on case 01:
+
+    boundary edges: 0
+    manifold edges: 840951
+    non-manifold edges: 6
+    mesh volume (mm^3): ~330000
+    voxel volume (mm^3): 331600.0
+
+Read the numbers as a diagnosis:
+
+- **`boundary = 0`** — the mesh is closed. Every triangle edge belongs to
+  another face. This is the property that volume, area, and boolean
+  operations require.
+- **`manifold`** — edges shared by exactly two faces; the vast majority.
+- **`non-manifold`** — edges shared by three or more faces. skimage's
+  marching cubes produces a handful at points where two surface patches
+  touch along a line. Six out of ~840,000 on a real femur at 1 mm is
+  normal, not a defect.
+- **`mesh volume`** should be within a few percent of the voxel volume.
+  Chamfering accounts for 5–10 percent; an order-of-magnitude difference
+  means the direction matrix or the axis reorder was dropped.
+
+If `boundary > 0`, the mesh is open. The usual cause is calling
+`measure.marching_cubes` with `allow_degenerate=False` (which strips the
+zero-area triangles that hold the surface closed at edge-touch points).
+A second cause is a mask with interior holes; `scipy.ndimage.binary_fill_holes`
+in `masks.py` fixes those.
+
+If `mesh volume` is much less than the voxel volume, the same interior
+holes are contributing negative volume from their inner surfaces. The
+fix is the same `binary_fill_holes` call.
+
+`tests/test_mesh.py` pins all three checks against the real file; run
+`pytest tests/test_mesh.py -v` for the actual verification. The command
+above is for inspection, not validation.
