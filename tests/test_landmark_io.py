@@ -11,6 +11,7 @@ def test_ras_to_lps_conversion(tmp_path):
     path = tmp_path / "landmarks.mrk.json"
     path.write_text(json.dumps({
         "markups": [{
+            "coordinateSystem": "RAS",
             "controlPoints": [
                 {"label": "femoral_head_R", "position": [100.0, 200.0, 50.0]},
                 {"label": "knee_centre_R", "position": [-10.0, 5.0, -100.0]},
@@ -34,11 +35,12 @@ def test_lps_file_passes_through_unchanged(tmp_path):
     assert load_landmarks(path)["femoral_head_R"] == (-94.2, -156.3, 1100.0)
 
 def test_unnamed_point_falls_back_to_index(tmp_path):
+    """Unset coordinateSystem is LPS per D030, so no negation."""
     path = tmp_path / "landmarks.mrk.json"
     path.write_text(json.dumps({
         "markups": [{"controlPoints": [{"position": [1.0, 2.0, 3.0]}]}]
     }))
-    assert load_landmarks(path)["point_0"] == (-1.0, -2.0, 3.0)
+    assert load_landmarks(path)["point_0"] == (1.0, 2.0, 3.0)
 
 
 def test_repeat_distances():

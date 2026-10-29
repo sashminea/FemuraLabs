@@ -17,7 +17,7 @@ that makes the wiring visible at a glance, and it cannot catch an error
 path or an edge case.
 
 To add a section, run `scripts/draw_flow.py` with a JSON specification on
-stdin and a descriptive `--slug`. See `docs/RUNBOOK.md` for the exact
+stdin and a descriptive `--slug`. See `docs/runbook.md` for the exact
 command.
 
 Node colours: blue = module, green = script, yellow = CLI entry point,

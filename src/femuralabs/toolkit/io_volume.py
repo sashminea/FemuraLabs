@@ -37,8 +37,8 @@ def load_volume(path: Path | str) -> Volume:
     )
 
 def save_nifti(volume: Volume, path: Path | str) -> None:
-    """Write a Volume to NIfTI, preserving spacing, origin, direction/
-
+    """Write a Volume to NIfTI, preserving spacing, origin, direction
+    
     .nii writes uncompressed; .nii.gz writes gzipped.
     """
     image = sitk.GetImageFromArray(volume.array)

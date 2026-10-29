@@ -85,7 +85,7 @@ Landmarks placed on case01:
 Landmarks pending (case02, case03):
 - All landmarks pending
 - Case02 and case03 segmentations not yet merged; once merged, follow
-  `docs/landmark_placement.md` for the same 10 landmarks per subject
+  `docs/landmarks.md` for the same 10 landmarks per subject
 
 Left-side joint-line landmarks (`condyle_*_L`, `plateau_*_L`) are
 placed once without a repeat on case01 and are not used by the

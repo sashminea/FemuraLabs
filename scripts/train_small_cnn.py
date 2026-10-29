@@ -13,6 +13,7 @@ from torchvision import datasets, transforms
 from femuralabs.toolkit.training.model import SmallCNN
 from femuralabs.toolkit.training.train_utils import (
     append_row,
+    environment_record,
     evaluate_with_accuracy,
     get_device,
     plot_curves,
@@ -20,11 +21,7 @@ from femuralabs.toolkit.training.train_utils import (
     save_config,
     set_seed,
     train_one_epoch,
-    environment_record,
-    save_config,
-    set_seed,
 )
-
 
 def build_loaders(batch_size: int, seed: int, data_root: Path):
     tfm = transforms.Compose(

@@ -97,3 +97,54 @@ def femoral_head_centre(
         centre, radius, rms = fit_sphere(current)
 
     return centre, radius, rms
+
+def knee_centre(
+    femur_verts: np.ndarray,
+    tibia_verts: np.ndarray,
+    slab_mm: float = 5.0,
+) -> np.ndarray:
+    """Knee joint centre from the femur and tibia meshes.
+
+    Take a thin slab at the distal extreme of the femur (the condyles)
+    and one at the proximal extreme of the tibia (the plateau). Both
+    centroids sit at the joint line, central in x-y. Their midpoint
+    approximates the knee joint centre.
+
+    In LPS, superior is +z. The distal femur is therefore at the minimum
+    z of the femur mesh; the proximal tibia is at the maximum z of the
+    tibia mesh.
+    """
+    fz_min = float(femur_verts[:, 2].min())
+    femur_slab = femur_verts[femur_verts[:, 2] < fz_min + slab_mm]
+
+    tz_max = float(tibia_verts[:, 2].max())
+    tibia_slab = tibia_verts[tibia_verts[:, 2] > tz_max - slab_mm]
+
+    if len(femur_slab) < 20 or len(tibia_slab) < 20:
+        raise ValueError(
+            f"Slab too small: femur {len(femur_slab)}, tibia {len(tibia_slab)}"
+        )
+    return (femur_slab.mean(axis=0) + tibia_slab.mean(axis=0)) / 2.0
+
+
+def ankle_centre(
+    tibia_verts: np.ndarray,
+    slab_mm: float = 5.0,
+) -> np.ndarray:
+    """Ankle joint centre from the centroid of the distal tibia slab.
+
+    The distal tibia is the tibial plafond (the flat bottom surface that
+    rests on the talus) plus the medial malleolus. Its centroid sits at
+    the joint line, but slightly medial of the true ankle centre: the
+    lateral malleolus is part of the fibula, not the tibia, so the
+    centroid is biased toward the tibia's medial edge.
+
+    Expected error vs a hand-placed midpoint between both malleoli:
+    3-6 mm on the medial side. If the error is larger, extend masks.py
+    to also extract the fibula and average the two distal tips.
+    """
+    tz_min = float(tibia_verts[:, 2].min())
+    slab = tibia_verts[tibia_verts[:, 2] < tz_min + slab_mm]
+    if len(slab) < 20:
+        raise ValueError(f"Slab too small: {len(slab)} vertices")
+    return slab.mean(axis=0)

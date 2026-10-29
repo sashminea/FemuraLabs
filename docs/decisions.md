@@ -176,6 +176,8 @@ swapped anywhere, the affected test fails.
 ## D025: combine the two reference segmentations into one multi-label NIfTI
 
 **Decision:** Femur and tibia masks come from one multi-label NIfTI produced
+in Slicer, on the `_1` grid, with labels femur_R=1, femur_L=2,
+tibia_R=3, tibia_L=4.
 in Slicer, on the `_1` grid, with labels femur=1, tibia=2, fibula=3. The two
 source `.seg` files stay in `data/raw/` as the original record but are not
 read by pipeline code.
