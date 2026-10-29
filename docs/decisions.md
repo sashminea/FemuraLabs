@@ -194,7 +194,7 @@ future test that asserts this on the loaded `femoral_head_R` and
 computation. The current test suite does not assert this directly; it is
 caught indirectly because a swap produces a 300 mm error against the
 mask centroid in `test_femoral_head_right_agrees_with_hand_placement`.
-A direct assertion is worth adding in D09.
+A direct assertion is worth adding in Sprint for landmarking.
 
 ---
 
