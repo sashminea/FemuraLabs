@@ -9,7 +9,7 @@ from femuralabs.toolkit.landmark_io import load_landmarks
 from femuralabs.toolkit.landmarks import fit_sphere, femoral_head_centre
 from femuralabs.toolkit.masks import extract_masks
 from femuralabs.toolkit.mesh import mask_to_mesh
-
+from femuralabs.toolkit.landmarks import fit_sphere, femoral_head_centre, ankle_centre
 
 COMBINED = Path("data/raw/case01/combined_seg.nii")
 LMK = Path("data/ref/landmarks_case01.mrk.json")
@@ -96,4 +96,67 @@ def test_femoral_head_left_agrees_with_hand_placement(real_case):
         f"head centre error {error_mm:.2f} mm; "
         f"fit centre {centre.round(1)} vs hand {reference.round(1)}; "
         f"radius {radius:.1f} mm, rms {rms:.2f} mm"
+    )
+
+def test_ankle_centre_right_agrees_with_hand_placement(real_case):
+    """Ankle centre from malleolar midpoint; error under 6 mm.
+
+    Diagnostic boundary: the y-delta on this side is -3.0 mm, at the
+    edge of the "revisit skipping talus" decision. If a future change
+    pushes dy past 3 mm, the tibia-centroid-as-talar-proxy assumption
+    in ankle_centre is the part to check.
+    """
+    volume, masks, hand = real_case
+    tv, _ = mask_to_mesh(
+        masks["tibia_R"].mask, volume.spacing, volume.origin, volume.direction,
+    )
+    fv, _ = mask_to_mesh(
+        masks["fibula_R"].mask, volume.spacing, volume.origin, volume.direction,
+    )
+    centre, info = ankle_centre(tv, fv)
+
+    tibia_z_min = float(tv[:, 2].min())
+    assert info["plafond_z"] > tibia_z_min + 10.0, (
+        f"plafond_z={info['plafond_z']:.1f} is too close to tibia bottom "
+        f"{tibia_z_min:.1f}; picked the malleolar tip, not the plafond"
+    )
+    assert info["medial_x"] > info["lateral_x"], (
+        f"on the right side medial should exceed lateral; "
+        f"got medial_x={info['medial_x']:.1f}, "
+        f"lateral_x={info['lateral_x']:.1f}"
+    )
+    reference = np.array(hand["ankle_centre_R"])
+    error_mm = float(np.linalg.norm(centre - reference))
+    assert error_mm < 6.0, (
+        f"ankle error {error_mm:.2f} mm; auto {centre.round(1)} vs "
+        f"hand {reference.round(1)}; info={info}"
+    )
+
+
+def test_ankle_centre_left_agrees_with_hand_placement(real_case):
+    """Same rule, mirrored side: medial_x < lateral_x on the left."""
+    volume, masks, hand = real_case
+    tv, _ = mask_to_mesh(
+        masks["tibia_L"].mask, volume.spacing, volume.origin, volume.direction,
+    )
+    fv, _ = mask_to_mesh(
+        masks["fibula_L"].mask, volume.spacing, volume.origin, volume.direction,
+    )
+    centre, info = ankle_centre(tv, fv)
+
+    tibia_z_min = float(tv[:, 2].min())
+    assert info["plafond_z"] > tibia_z_min + 10.0, (
+        f"plafond_z={info['plafond_z']:.1f} is too close to tibia bottom "
+        f"{tibia_z_min:.1f}; picked the malleolar tip, not the plafond"
+    )
+    assert info["medial_x"] < info["lateral_x"], (
+        f"on the left side medial should be less than lateral; "
+        f"got medial_x={info['medial_x']:.1f}, "
+        f"lateral_x={info['lateral_x']:.1f}"
+    )
+    reference = np.array(hand["ankle_centre_L"])
+    error_mm = float(np.linalg.norm(centre - reference))
+    assert error_mm < 6.0, (
+        f"ankle error {error_mm:.2f} mm; auto {centre.round(1)} vs "
+        f"hand {reference.round(1)}; info={info}"
     )

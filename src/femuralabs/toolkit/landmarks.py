@@ -129,22 +129,82 @@ def knee_centre(
 
 def ankle_centre(
     tibia_verts: np.ndarray,
-    slab_mm: float = 5.0,
-) -> np.ndarray:
-    """Ankle joint centre from the centroid of the distal tibia slab.
+    fibula_verts: np.ndarray,
+    search_top_mm: float = 30.0,
+    bin_mm: float = 2.0,
+) -> tuple[np.ndarray, dict]:
+    """Ankle joint centre from tibia + fibula meshes.
 
-    The distal tibia is the tibial plafond (the flat bottom surface that
-    rests on the talus) plus the medial malleolus. Its centroid sits at
-    the joint line, but slightly medial of the true ankle centre: the
-    lateral malleolus is part of the fibula, not the tibia, so the
-    centroid is biased toward the tibia's medial edge.
+    The very bottom of the tibia is the tip of the medial malleolus, not
+    the joint surface. The joint surface is the plafond, the flat bottom
+    of the shinbone that sits on the talus. Finding it: within the bottom
+    ``search_top_mm`` of the tibia, the plafond is where the cross-section
+    is widest. On case01 this is ~14 mm above the malleolar tip.
 
-    Expected error vs a hand-placed midpoint between both malleoli:
-    3-6 mm on the medial side. If the error is larger, extend masks.py
-    to also extract the fibula and average the two distal tips.
+    At the plafond level, take the medial edge of the tibia (medial
+    malleolus) and the lateral edge of the fibula (lateral malleolus). The
+    ankle centre is their midpoint — this is rule (a) in
+    docs/conventions.md.
+
+    Returns (centre, intermediates) so a failing test can show which part
+    of the rule went wrong.
     """
-    tz_min = float(tibia_verts[:, 2].min())
-    slab = tibia_verts[tibia_verts[:, 2] < tz_min + slab_mm]
-    if len(slab) < 20:
-        raise ValueError(f"Slab too small: {len(slab)} vertices")
-    return slab.mean(axis=0)
+    if len(tibia_verts) < 100 or len(fibula_verts) < 100:
+        raise ValueError(
+            f"too few verts: tibia {len(tibia_verts)}, fibula {len(fibula_verts)}"
+        )
+
+    # 1. Plafond z: widest cross-section in the bottom search_top_mm.
+    t_z_min = float(tibia_verts[:, 2].min())
+    proximal = tibia_verts[tibia_verts[:, 2] < t_z_min + search_top_mm]
+    if len(proximal) < 100:
+        raise ValueError(
+            f"proximal region has only {len(proximal)} tibia verts; "
+            f"search_top_mm={search_top_mm} too tight"
+        )
+    bin_idx = np.floor((proximal[:, 2] - t_z_min) / bin_mm).astype(int)
+    extents: dict[int, float] = {}
+    for b in np.unique(bin_idx):
+        xs = proximal[bin_idx == b, 0]
+        if len(xs) >= 10:
+            extents[int(b)] = float(xs.max() - xs.min())
+    if not extents:
+        raise ValueError("no bin had enough verts to measure width")
+
+    max_ext = max(extents.values())
+    top_bins = [b for b, e in extents.items() if e >= max_ext - 1.0]
+    plafond_z = float(np.mean([t_z_min + (b + 0.5) * bin_mm for b in top_bins]))
+
+    # 2. Verts at the plafond level (within half a bin in z).
+    tol = bin_mm / 2.0
+    tibia_at = tibia_verts[np.abs(tibia_verts[:, 2] - plafond_z) < tol]
+    fibula_at = fibula_verts[np.abs(fibula_verts[:, 2] - plafond_z) < tol]
+    if len(tibia_at) < 10 or len(fibula_at) < 10:
+        raise ValueError(
+            f"not enough verts at plafond_z={plafond_z:.1f}: "
+            f"tibia {len(tibia_at)}, fibula {len(fibula_at)}"
+        )
+
+    # 3. Medial/lateral edges. Sign convention: in LPS, patient's right
+    #    side is negative world x, so medial (toward midline = toward 0)
+    #    is the larger x on R and the smaller x on L.
+    median_x = float(np.median(tibia_verts[:, 0]))
+    if median_x < 0:
+        medial_x = float(tibia_at[:, 0].max())
+        lateral_x = float(fibula_at[:, 0].min())
+    else:
+        medial_x = float(tibia_at[:, 0].min())
+        lateral_x = float(fibula_at[:, 0].max())
+
+    ankle_x = (medial_x + lateral_x) / 2.0
+    ankle_y = float(tibia_at[:, 1].mean())
+    ankle_z = plafond_z
+
+    return (
+        np.array([ankle_x, ankle_y, ankle_z]),
+        {
+            "plafond_z": plafond_z,
+            "medial_x": medial_x,
+            "lateral_x": lateral_x,
+        },
+    )

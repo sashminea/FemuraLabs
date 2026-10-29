@@ -13,6 +13,8 @@ LABEL_NAMES = {
     2: "femur_L",
     3: "tibia_R",
     4: "tibia_L",
+    5: "fibula_R",
+    6: "fibula_L",
 }
 
 

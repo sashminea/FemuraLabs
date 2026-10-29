@@ -536,10 +536,12 @@ under labels 1–4.
 
     # Source label values, from the .labels.csv files. See docs/data.md.
     merged = np.zeros_like(t, dtype=np.uint8)
-    merged[t == 5] = 1  # femur_R
-    merged[t == 6] = 2  # femur_L
-    merged[s == 2] = 3  # tibia_R
-    merged[s == 9] = 4  # tibia_L
+    merged[t == 5] = 1   # femur_R
+    merged[t == 6] = 2   # femur_L
+    merged[s == 2] = 3   # tibia_R
+    merged[s == 9] = 4   # tibia_L
+    merged[s == 3] = 5   # fibula_R
+    merged[s == 10] = 6  # fibula_L
 
     out = sitk.GetImageFromArray(merged)
     out.CopyInformation(thighs)
@@ -549,7 +551,7 @@ under labels 1–4.
 
 Expected:
 
-    wrote (512, 512, 1637) labels [0 1 2 3 4]
+    wrote (512, 512, 1637) labels [0 1 2 3 4 5 6]
 
 `CopyInformation` is not optional. Without it, SimpleITK writes the new
 array with default geometry (spacing 1 mm, origin 0), and every downstream
@@ -570,10 +572,12 @@ because SimpleITK detects the format from the file signature.
       print('labels:', np.unique(arr)); \
       print('voxels:', {int(v): int((arr == v).sum()) for v in np.unique(arr)})"
 
-Expected: `(512, 512, 1637)`, labels `[0 1 2 3 4]`, and non-zero counts
-at labels 1–4 (millions each) with background (0) dominating. If the
-counts at 1–4 are all zero, the merge script matched no voxels — check the
-source label values against `docs/data.md` before touching anything else.
+Expected: `(512, 512, 1637)`, labels `[0 1 2 3 4 5 6]`, and non-zero
+counts at every label 1–6 with background (0) dominating. Femurs and
+tibias are in the millions of voxels; fibulas are ~77,000 voxels each
+(thinner bones). If any of 1–6 is zero, the merge script matched no
+voxels for that bone — check the source label value for that row
+against `docs/data.md` before touching anything else.
 
 ### If the export produces a crop-sized file
 
@@ -638,12 +642,16 @@ world coordinates.
       m = extract_masks(load_volume('data/raw/case01/combined_seg.nii')); \
       [print(f'{b.name:<8} {b.voxel_count:>10}  {b.volume_ml:>8.1f} mL  x={b.centroid_world[0]:>9.1f} y={b.centroid_world[1]:>9.1f} z={b.centroid_world[2]:>9.1f}') for b in m.values()]"
 
-Expected on case 01:
+Expected on case 01 (fibula values are new in D09; if your run differs
+in the last two rows, that is the fibula, and the count should be
+~77k for each side):
 
     femur_R      496845     331.6 mL  x=    -83.5 y=   -129.9 z=    870.7
     femur_L      452747     302.1 mL  x=    101.0 y=   -131.6 z=    894.4
     tibia_R      307340     205.1 mL  x=    -59.8 y=    -96.3 z=    493.8
     tibia_L      287692     192.0 mL  x=     87.5 y=    -99.3 z=    510.0
+    fibula_R      77023     ~51.4 mL  x=    -75.9 y=    -96.6 z=    520.8
+    fibula_L      77233     ~51.5 mL  x=     93.4 y=    -96.0 z=    536.3
 
 Sanity checks on any new subject:
 
@@ -765,13 +773,16 @@ JSON.
       --case data/raw/case01/combined_seg.nii \
       --out output/case01
 
-Expected (vertex counts approximate):
+Expected (vertex counts approximate; fibula rows are new in D09 and
+will print with smaller vert counts than the long bones):
 
     wrote output/case01/summary.json
       femur_R    277167 verts   331.60 mL
       femur_L     ~250k verts   302.10 mL
       tibia_R     ~150k verts   205.10 mL
       tibia_L     ~140k verts   192.00 mL
+      fibula_R    ~40k verts    51.4 mL
+      fibula_L    ~40k verts    51.5 mL
 
 Then inspect the JSON:
 
@@ -856,3 +867,64 @@ diagnostic.
 `tests/test_landmarks.py` pins the radius range and the 10 mm error
 threshold against the case01 hand reference. Run
 `pytest tests/test_landmarks.py -v` for the check.
+
+## Ankle centre by malleoli midpoint
+
+Reads the tibia and fibula meshes, finds the plafond (the flat bottom
+of the shinbone that sits on the ankle bone), and takes the midpoint
+of the medial (tibia) and lateral (fibula) malleoli at that level.
+Prints the fit centre, the hand reference, the error, and the three
+intermediate values that decided the fit.
+
+    PYTHONPATH=src python -c "
+    import numpy as np
+    from femuralabs.toolkit.io_volume import load_volume
+    from femuralabs.toolkit.masks import extract_masks
+    from femuralabs.toolkit.mesh import mask_to_mesh
+    from femuralabs.toolkit.landmarks import ankle_centre
+    from femuralabs.toolkit.landmark_io import load_landmarks
+    v = load_volume('data/raw/case01/combined_seg.nii')
+    m = extract_masks(v)
+    h = load_landmarks('data/ref/landmarks_case01.mrk.json')
+    for side in ('R', 'L'):
+        tv, _ = mask_to_mesh(m[f'tibia_{side}'].mask, v.spacing, v.origin, v.direction)
+        fv, _ = mask_to_mesh(m[f'fibula_{side}'].mask, v.spacing, v.origin, v.direction)
+        centre, info = ankle_centre(tv, fv)
+        ref = np.array(h[f'ankle_centre_{side}'])
+        err = float(np.linalg.norm(centre - ref))
+        print(f'ankle_centre_{side}: auto {centre.round(1)}, hand {ref.round(1)}, '
+              f'error {err:.2f} mm, plafond_z {info[\"plafond_z\"]:.1f} mm, '
+              f'medial_x {info[\"medial_x\"]:.1f}, lateral_x {info[\"lateral_x\"]:.1f}')
+    "
+
+Expected on case 01:
+
+    ankle_centre_R: auto [-53.7 -79.4 307.7], hand [-52.4 -76.4 305.2], error 4.15 mm, plafond_z 307.7 mm, medial_x -28.3, lateral_x -79.1
+    ankle_centre_L: auto [ 92.8 -89.7 324.1], hand [ 90.5 -89.9 320.6], error 4.14 mm, plafond_z 324.1 mm, medial_x 64.5, lateral_x 121.1
+
+Both errors are about twice the hand-placement repeat distance for the
+same landmark (1.97 mm on R; the L repeat is treated as ~2.0 mm, not
+0.84, per `docs/conventions.md` Known limitations). That is close to
+the hand reference, but *not* at the level of a second human placer —
+weaker than the femoral head fit, which matched the hand repeat.
+
+**Reading the diagnostic if a number looks wrong:**
+
+- **`plafond_z` within 3 mm of the tibia bottom** → the mesh is
+  truncated; the search window found the malleolar tip, not the
+  plafond. Check the tibia mask covers the full bone.
+- **`plafond_z` more than 30 mm above the tibia bottom** → the widest
+  band is a metaphyseal flare, not the plafond. Check the mask for a
+  spur or a fracture callus.
+- **`medial_x` on the wrong side of `lateral_x`** → the R/L
+  detection is confused. This is caught by an explicit assertion in
+  `tests/test_landmarks.py`.
+- **Error > 6 mm with all three intermediates sane** → the
+  assumption "plafond centroid ≈ talar dome directly beneath it" is
+  what to question. That is the trigger for adding talus (see
+  `docs/landmarks.md`, ankle_centre, "Why no talus yet").
+
+`tests/test_landmarks.py::test_ankle_centre_right_agrees_with_hand_placement`
+and `..._left_agrees_with_hand_placement` pin the 6 mm threshold and the
+medial-vs-lateral ordering. Run `pytest tests/test_landmarks.py -v` for
+the verification; the command above is for inspection.

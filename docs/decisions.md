@@ -10,6 +10,54 @@ New entries go at the top.
 
 ---
 
+## D032: extend `combined_seg.nii` from four to six labels (add fibula)
+
+**Decision:** The merged segmentation now carries six labels:
+femur_R=1, femur_L=2, tibia_R=3, tibia_L=4, **fibula_R=5, fibula_L=6**.
+The two fibula labels are read from `shanks_on_full.nii` at source
+values 3 (fibula_R) and 10 (fibula_L) and mapped to 5 and 6 by the
+same merge script. No other bone was added. Talus is deliberately
+absent (see Consequence).
+
+**Alternative rejected:** Keep the merged file at four labels and
+approximate the ankle centre from the tibia alone; or add all fifteen
+source labels (talus, calcaneus, tarsals, metatarsals, phalanges) so
+that future rules have everything on hand.
+
+**Reason:** The ankle-centre rule in `docs/conventions.md` is rule
+(a): "midpoint between the medial and lateral malleoli, projected to
+the top of the talus." The lateral malleolus is part of the fibula,
+not the tibia. On case01, a tibia-only version of the rule produced
+an ankle-centre error of 22.4 mm (right) and 25.8 mm (left) against
+the hand-placed reference — 10× the hand-placement repeat distance
+and far larger than the medial-only bias the previous docstring
+anticipated. Extending the merge with the fibula is what the
+documented rule requires; the alternative was to change the rule to
+one that contradicts `conventions.md`. Extending to all fifteen
+source labels was rejected because each bone added is a naming
+decision, a documentation line, and a set of tests that must
+justify it. Only fibula has a documented use in the pipeline today.
+
+**Consequence:** `masks.LABEL_NAMES` has six entries. `extract_masks`
+returns `fibula_R` and `fibula_L` alongside the four existing bones;
+any caller that iterates `masks.values()` now gets six items, so a
+caller that assumed four must filter by name. `pipeline_demo.py`
+writes two extra STL files and two extra `bones` entries in
+`summary.json` — this is desired (the fibula is part of the deliverable
+for a lower-limb analysis) but changes the output shape of D05. The
+existing tests pass unmodified because they iterate the dict rather
+than hard-code four. **Talus remains absent** even though rule (a)
+cites the top of the talus: on case01 the tibia centroid at the
+plafond level lands within 3 mm of the hand click in y, so the
+plafond is a usable proxy for the talar dome directly beneath it. The
+residual 3 mm is noted in `docs/landmarks.md` (ankle_centre,
+"Why no talus yet") as the trigger for adding talus if a future
+subject exceeds 3 mm of y error. This is a deliberate scope cut, not
+a forgotten bone.
+
+
+---
+
 ## D031: femoral head fit constrained to a medial window
 
 **Decision:** `femoral_head_centre` takes the top 25 percent of the femur
@@ -190,6 +238,8 @@ anyway. Two grids downstream invite a silent mismatch.
 
 **Consequence:** Any second subject uses the same combined-export step.
 Licences and citations are in `CITATION.cff`; coverage is in `docs/data.md`.
+**See also:** D032 extends the merged file from four to six labels
+(fibula_R=5, fibula_L=6) for the ankle-centre rule.
 
 
 ## D022: `verdict` handles lower-is-better metrics by argument order

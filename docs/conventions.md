@@ -33,7 +33,8 @@ Surface-click landmarks placed by eye sit at 7–9 mm.
 | plateau_medial_R | Coronal at joint line: most proximal-medial point of the medial tibial plateau | needed for MPTA |
 | plateau_lateral_R | Coronal at joint line: most proximal-lateral point of the lateral tibial plateau | same |
 
-Click-by-click placement instructions are in `docs/landmark_placement.md`.
+Click-by-click placement instructions are in `docs/landmarks.md`, under
+"Placement guide".
 
 ## Conventions that vary between sources
 
@@ -64,8 +65,21 @@ table when new landmarks are placed.
 | femoral_head_L | 6.21 mm |
 | condyle_medial_R | 7.29 mm |
 | plateau_lateral_R | 8.74 mm |
-| ankle_centre_L | 0.84 mm |
-| **mean** | **4.18 mm** |
+| ankle_centre_L | 2.0 mm (est.) |
+| **mean** | **4.55 mm** |
+
+The mean excludes `ankle_centre_L`: its 2.0 mm row is an estimate, not
+a measurement (see Known limitations), so the mean over the nine
+anchor-vs-anchor comparisons is 4.55 mm. This matches the measured
+table in `docs/landmarks.md`.
+
+`ankle_centre_L` is estimated at 2.0 mm, not measured. The first-pass
+figure of 0.84 mm was measured against a guess, not against a second
+anchor-based placement, and was not credible as a repeat distance. The
+estimate of 2.0 mm matches the observed `ankle_centre_R` repeat
+distance (1.97 mm). The 2.0 mm figure is what the D09 validation
+report uses as the yardstick for both sides; it is not a measurement
+and is labelled as an estimate wherever it appears.
 
 The mean is dominated by `condyle_medial_R` and `plateau_lateral_R`,
 which were placed by surface click. Anchor-based landmarks sit at
@@ -99,14 +113,30 @@ is attempted, which is out of scope for this sprint.
   guess-based placement, not between two anchor-based placements. A
   true anchor-vs-anchor repeat would likely be 1–2 mm; the values
   in the table (1.97 and 1.59 mm) are lower-bound estimates.
-- `ankle_centre_L` was absent from the first repeat measurement due
-  to a label-spelling mismatch (`ankle_center_L` vs `ankle_centre_L`)
-  between the two save sessions. Corrected by renaming the label in
-  the repeat file; the repeat distance for that landmark should be
-  recomputed and inserted above.
+- `ankle_centre_L` is listed as **2.0 mm (est.)**, not a measurement.
+  The label-spelling mismatch (`ankle_center_L` vs `ankle_centre_L`)
+  between the two save sessions was corrected by renaming, but the
+  0.84 mm value that resulted compared the new anchor-based placement
+  against the pre-fix guess-based placement, so it is a lower bound,
+  not a repeat distance. 2.0 mm is the working yardstick, matching the
+  `ankle_centre_R` repeat distance (1.97 mm). A true anchor-vs-anchor
+  repeat on case01 should replace it when time allows; until then, the
+  validation report states 2.0 mm as an estimate.
 - Joint-line angles (mLDFA, MPTA) have not been evaluated against
   the hand reference because two of the four joint-line landmarks
   (`condyle_medial_R`, `plateau_lateral_R`) still sit at 7–9 mm,
   which is too much noise for a degree-level comparison. This is a
   scope decision, not a defect: the pipeline supports the
   measurement, but the reference is not tight enough to validate it.
+- The automatic ankle centre (`landmarks.ankle_centre`) agrees with
+  the hand reference to within **4.15 mm (right)** and **4.14 mm
+  (left)** on case01. That is about twice the hand-placement repeat
+  distance for the same landmarks (1.97 mm and 2.0 mm est.), so the
+  automatic rule is **close to** the hand reference but not at the
+  level of a second human placer. This is weaker than the femoral-head
+  sphere fit, which matched the hand repeat on both sides. The residual
+  4 mm splits into a 2.5 mm z-bias (the plafond band is 2 mm tall, so
+  averaging over it pulls the answer up) and about 3 mm of x/y scatter
+  on the left. Method and diagnostic in `docs/landmarks.md`
+  (ankle_centre); the "why no talus yet" note there records the
+  condition under which talus extraction should be added.

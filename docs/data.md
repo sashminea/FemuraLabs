@@ -79,19 +79,29 @@ that is an artefact of the annotation workflow, not a bone. Ignore it.
 | 14 | Metatarsals_L |
 | 15 | Phalanges_L |
 
-The alignment pipeline needs only femur and tibia. The merged file
-(`combined_seg.nii`) contains:
+The alignment pipeline needs femur, tibia and fibula. Fibula is only
+used by the ankle-centre rule (the lateral malleolus is part of the
+fibula, not the tibia; see `docs/landmarks.md`, ankle_centre). The
+merged file (`combined_seg.nii`) contains:
 
-| Label | Bone |
-|---|---|
-| 0 | Background |
-| 1 | Femur_R (was label 5 in thighs) |
-| 2 | Femur_L (was label 6 in thighs) |
-| 3 | Tibia_R (was label 2 in shanks) |
-| 4 | Tibia_L (was label 9 in shanks) |
+| Label | Bone | Source label | Source file |
+|---|---|---|---|
+| 0 | Background | — | — |
+| 1 | Femur_R | 5 | thighs |
+| 2 | Femur_L | 6 | thighs |
+| 3 | Tibia_R | 2 | shanks |
+| 4 | Tibia_L | 9 | shanks |
+| 5 | Fibula_R | 3 | shanks |
+| 6 | Fibula_L | 10 | shanks |
 
-Anything else in the source segmentations is not written to the merged
-file.
+The source-label column is the mapping the merge script uses. It is
+written out explicitly rather than derived by position, so any future
+reader can confirm the mapping against the `.labels.csv` files that
+Slicer exports alongside each `.seg.nrrd`.
+
+Anything else in the source segmentations (patella, talus, calcaneus,
+tarsals, metatarsals, phalanges, hip, sacrum) is not written to the
+merged file.
 
 ## Producing `combined_seg.nii`
 
@@ -105,13 +115,20 @@ segmentations". Summary:
    does not let you set the filename; Slicer uses the segmentation's own
    name. The two outputs are renamed after copying to WSL:
    `thighs_on_full.nii` and `shanks_on_full.nii`.
-3. A short Python script reads both files, extracts the four bones by
-   their source label values (5, 6, 2, 9), writes them into a new array
-   as labels 1-4, and saves the result as `combined_seg.nii` on the
-   full-limb grid.
+3. A short Python script reads both files, extracts the six bones by
+   their source label values (thighs 5, 6 → femur_R, femur_L;
+   shanks 2, 9, 3, 10 → tibia_R, tibia_L, fibula_R, fibula_L), writes
+   them into a new array as labels 1-6, and saves the result as
+   `combined_seg.nii` on the full-limb grid. The mapping is explicit
+   per source label value, not derived from source-file order.
 4. Verification: `combined_seg.nii` must be 512 x 512 x 1637 with the
    same spacing as the full volume, and its unique label values must be
-   `[0 1 2 3 4]`.
+   `[0 1 2 3 4 5 6]`. Expected voxel counts on case01:
+   femur_R≈497k, femur_L≈453k, tibia_R≈307k, tibia_L≈288k,
+   fibula_R≈77k, fibula_L≈77k. A zero at any of 1-6 means the
+   merge script mapped no voxels — check the source label value in
+   that row against `shanks_on_full.labels.csv` or
+   `thighs_on_full.labels.csv`.
 
 
 ## Traps worth remembering
@@ -142,3 +159,11 @@ segmentations". Summary:
   SimpleITK returns (−249.5, −392.5, 119.7). Same point, x and y
   negated. `docs/runbook.md`'s load_volume check reports the LPS form;
   do not "fix" the sign by comparing against Slicer.
+- **The merge script must be auditable.** It maps source label values
+  to merged labels one number at a time, not by order of first
+  appearance, not by loop index. On case01 the mapping is
+  thighs {5→1, 6→2}, shanks {2→3, 9→4, 3→5, 10→6}. A positional
+  mapping silently gives a wrong answer the day a subject's source
+  labels arrive in a different order, and there is no error message.
+  The table in "Segment labels" above is the authoritative mapping;
+  the merge script must match it line for line.

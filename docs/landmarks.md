@@ -6,13 +6,13 @@ placement rules for the ten landmarks, the measured hand repeat
 distances, and the algorithm that finds the femoral head centre without
 a human.
 
-Read the nine traps first. Every one of them is a silent error — the
+Read the ten traps first. Every one of them is a silent error — the
 pipeline produces a mirrored mesh, a wildly wrong angle, or a
 physiologically impossible radius with no error message. Catching them
 before they compound is the difference between a defensible validation
 report and one that gets torn apart in review.
 
-## The nine traps
+## The ten traps
 
 1. **Slicer's default axial view is radiological.** Screen-right is the
    patient's **left**. When you place a landmark labeled `_R`, it must
@@ -45,23 +45,32 @@ report and one that gets torn apart in review.
    the centre laterally. Constrain by both z (superior) and x (medial).
    See "Femoral head centre" below.
 
-6. **The fit radius is the diagnostic.** An adult femoral head is
+6. **The bottom of the tibia mask is not the ankle joint.** The very
+   bottom of the shinbone is the pointed tip of the medial malleolus
+   (the inner ankle bone). The actual joint surface is the plafond,
+   a flat band about 14 mm higher. A slab at the very bottom samples
+   the tip and comes out 14 mm too low, 15 mm too far forward, and
+   10 mm too far inward — a 22–26 mm error on case01 with no warning.
+   Find the plafond as the widest cross-section in the bottom 30 mm
+   of the tibia, not as the bottom-most slab.
+
+7. **The fit radius is the diagnostic.** An adult femoral head is
    17–25 mm radius. A fit that returns 30+ mm is not the head. Assert
    the range in the test; do not compare against a hand-placed point
    until the radius is plausible.
 
-7. **"Automatic error < hand repeat distance" is success.** The hand
+8. **"Automatic error < hand repeat distance" is success.** The hand
    reference is not perfect either. If the automatic method agrees with
    the hand point to within the hand-placement repeat distance for the
    same point, the method is at the level of a second human placer.
    That is the strongest possible outcome for a single-subject
    reference, and it is what D08 achieved.
 
-8. **`data/ref/` is gitignored.** Landmark files contain patient-specific
+9. **`data/ref/` is gitignored.** Landmark files contain patient-specific
    coordinates and stay on disk. Only the placement rules, repeat
    distances, and algorithm code are committed.
 
-9. **The pipeline does not need every landmark.** HKA and MAD use only
+10. **The pipeline does not need every landmark.** HKA and MAD use only
    the six centres (hip, knee, ankle per side). Joint-line angles
    (mLDFA, MPTA) also need the four condyle/plateau points, but those
    four are surface clicks with higher noise and are not part of the
@@ -492,6 +501,89 @@ The extension from case01 to case02/03 should take about 5 minutes per
 subject, not 30: extract the mesh, run the diagnostic sweep, pick the
 window, note it in this file. The algorithm code does not need to
 change.
+
+
+### Ankle centre — `landmarks.ankle_centre`
+
+Given the tibia and fibula meshes (world millimetres), returns
+`(centre, info)` where `info` carries `plafond_z`, `medial_x`,
+`lateral_x`. The centre is compared against `ankle_centre_R` /
+`ankle_centre_L` to measure the automatic method.
+
+**Picture the bottom of the shinbone.** Like an upside-down wine
+glass. The very bottom is a narrow point — the tip of the inner ankle
+bone (the medial malleolus). Going up, the bone flares out into the
+wide body of the shinbone. The flat bottom of that body, where it
+sits on the ankle bone (talus), is the plafond. The hand-placer
+clicks the plafond. The old draft sampled the very bottom, which is
+the tip, 14 mm below the plafond — hence a 22–26 mm error with no
+warning sign in the code.
+
+**Algorithm.** Three steps, no per-subject tuning:
+
+1. **Find the plafond.** In the bottom 30 mm of the tibia, bin
+   vertices into 2 mm z-bands and measure each band's x-extent.
+   The widest band is the plafond. On case01 the plafond is a
+   flat-topped band 3.5–7 mm tall, at z ≈ 265 (R) and z ≈ 287 (L),
+   within 2 mm of the hand clicks.
+2. **Take the two malleoli at the plafond level.** At
+   `plafond_z ± 1 mm`, the medial edge of the tibia is the medial
+   malleolus; the lateral edge of the fibula is the lateral
+   malleolus.
+3. **Midpoint is the ankle centre.** x = mean of the two edges;
+   y = mean of the tibia verts at that level (the plafond centroid
+   sits directly over the talar dome); z = plafond_z.
+
+This is rule (a) from `docs/conventions.md`: "midpoint between the
+medial and lateral malleoli, projected to the top of the talus". The
+projection to the talar dome is approximated by the plafond
+centroid's y; we do not extract the talus mesh. See "Why no talus
+yet" below.
+
+**Parameters.** `search_top_mm=30.0`, `bin_mm=2.0`. The 30 mm is a
+safety margin: the plafond is ~14 mm above the malleolar tip, so 30
+gives 16 mm of slack above the plafond. Both are shape assumptions
+about adult anatomy, not numbers tuned to case01's hand reference.
+
+**On case01 with the default parameters:**
+
+| Side | Fit centre | Hand centre | Error | Hand repeat |
+|---|---|---|---|---|
+| R | (−53.7, −79.4, 307.7) | (−52.4, −76.4, 305.2) | 4.15 mm | 1.97 mm |
+| L | (92.8, −89.7, 324.1) | (90.5, −89.9, 320.6) | 4.14 mm | ~2.0 mm |
+
+Both errors are about **2× the hand repeat distance** — close to the
+hand reference, but not at the level of a second human placer. This
+is a weaker result than `femoral_head_centre` (which matched the
+hand repeat). The residual 4 mm splits into a 2.5 mm z-bias (the
+plafond band is 2 mm tall, so averaging over it pulls the answer up)
+and about 3 mm of x/y scatter on the left.
+
+**Why no talus yet.** The rule that `conventions.md` promises uses
+the talus. We do not extract the talus mask. On case01 the plafond
+centroid's y lands within 3 mm of the hand click — the plafond is
+already a good proxy for the talar dome directly beneath it. The
+R-side dy is exactly −3.0 mm, at the boundary of "revisit if it
+gets worse". Adding the talus is deferred until a subject shows
+dy > 3 mm; the pipeline is honest about it in the validation report.
+
+**Extending to case02 and case03.** Same rule, same parameters. No
+per-subject tuning is expected — the plafond is anatomical, not
+patient-specific. If a subject's fit fails, the diagnostic is the
+`info` dict, not a sweep:
+
+- `plafond_z` within 3 mm of `tibia_z_min` → the bottom 30 mm is
+  truncated. Check the mesh covers the full tibia.
+- `plafond_z` > 30 mm above `tibia_z_min` → the widest band is not
+  the plafond but a metaphyseal flare higher up. Widen the search
+  band or check the mask for a spur.
+- `medial_x` on the wrong side of `lateral_x` → the side-detection
+  heuristic (`np.median(tibia_verts[:, 0]) < 0`) is confused.
+  Unlikely on a full-limb scan but the assertion catches it.
+- Error > 6 mm with all three intermediates sane → the assumption
+  "plafond centroid ≈ talar dome" is the part to question. That is
+  the trigger to add the talus mesh.
+
 
 ## Scope
 
