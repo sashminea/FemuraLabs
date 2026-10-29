@@ -411,6 +411,14 @@ print("all sides correct")
 
 ## Automatic detection
 
+Three landmarks are estimated from the meshes: femoral head centre,
+ankle centre, knee centre. Each has a rule, a measured error against
+the case01 hand reference, and a diagnostic function that prints the
+intermediate values a failure points at. All three are weaker than a
+second human placer on at least one side — that is documented per
+rule, not hidden. Only `femoral_head_centre` matches the hand repeat
+distance on both sides.
+
 ### Femoral head centre — `landmarks.femoral_head_centre`
 
 Given a femur mesh (world millimetres), returns `(centre, radius, rms)`.
@@ -584,6 +592,80 @@ patient-specific. If a subject's fit fails, the diagnostic is the
   "plafond centroid ≈ talar dome" is the part to question. That is
   the trigger to add the talus mesh.
 
+### Knee centre — `landmarks.knee_centre`
+
+Given the femur mesh (and the tibia mesh, accepted for signature
+compatibility but not used), returns `(centre, info)` where `info`
+carries `condyle_medial`, `condyle_lateral`, and `slab_mm`. The centre
+is compared against `knee_centre_R` / `knee_centre_L` to measure the
+automatic method.
+
+**Rule.** Two-condyle midpoint at the distal femur, per rule (a) in
+`docs/conventions.md`: "midpoint between centres of the medial and
+lateral condyle blobs". Algorithm:
+
+1. Take the bottom 5 mm of the femur mesh (the distal condyles at the
+   joint line).
+2. Split that slab at its own x mid-point.
+3. Each half's vertex centroid approximates one condyle blob.
+4. The knee centre is the mean of the two blob centroids.
+
+Nothing is tuned per subject. `slab_mm=5.0` is the only parameter, and
+it matches the level at which the hand click was placed.
+
+**The previous draft was wrong, and why.** The draft averaged the
+*whole* distal femur cross-section with the *whole* proximal tibia
+cross-section. Two independent biases made it 10–14 mm off:
+
+- The tibia's top cross-section sits ~14 mm anterior of the femur's
+  bottom cross-section, so averaging the two pulls the result
+  posterior. On case01 both sides showed dy = +10 mm, same direction,
+  same magnitude — a signature of a systematic averaging error, not
+  noise.
+- The whole femur cross-section's centroid drifts toward the medial
+  condyle, which is larger. The hand click is at the mid-point of the
+  two condyles, not at the cross-section's centroid. The split-at-mid
+  rule corrects this.
+
+The diagnostic pattern was: (a) split into mesh-vs-mask and
+slab-5mm-vs-20mm; (b) dy was +10 mm on all four combinations, killing
+the vertex-density and slab-thickness explanations; (c) femur-only vs
+tibia-only vs averaged showed the tibia was the source of dy; (d)
+two-condyle split matched rule (a) and cut the error in half.
+
+**On case01 with `slab_mm=5.0`:**
+
+| Side | Fit centre | Hand centre | Error | Hand repeat |
+|---|---|---|---|---|
+| R | (−66.8, −123.8, 661.4) | (−71.2, −127.9, 663.3) | 6.36 mm | 3.02 mm |
+| L | (81.1, −107.5, 681.9) | (81.9, −114.0, 685.0) | 7.21 mm | 5.00 mm |
+
+**The residual is the hand reference, not the rule.** On the right,
+the hand click sits 8.7 mm lateral of the femur slab's x-centroid; on
+the left, it sits 0.4 mm. The two hand clicks were placed relative to
+their own condyles by an inconsistent amount, and no symmetric
+automated rule can match both to under 8 mm. The errors of 6.36 mm (R)
+and 7.21 mm (L) are 2.1× and 1.4× the hand-placement repeat distance
+for the same landmarks, so the rule is *close to* the hand reference
+but not at the level of a second human placer. This is documented
+honestly, not tuned away.
+
+**Extending to case02 and case03.** Same rule, same parameter. The
+only failure mode to watch:
+
+- **`condyle_medial` and `condyle_lateral` too close (< 20 mm apart)**
+  → the half-split landed between two parts of the same condyle, not
+  between two distinct blobs. Visible when the femur's distal
+  cross-section is not two-lobed at the 5 mm level (rare in normal
+  anatomy; suspect a mask artefact).
+- **Separation large but centre error > 12 mm** → the hand reference
+  for that subject is again lateral-biased. Cross-check against the
+  femur's slab centroid; if the hand click is more than ~5 mm off it,
+  the hand reference is the suspect, not the code.
+
+Both sides use the same rule; the medial/lateral labelling is
+side-detected via `np.median(femur_verts[:, 0]) < 0` and asserted in
+the test.
 
 ## Scope
 

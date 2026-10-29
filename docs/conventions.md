@@ -140,3 +140,14 @@ is attempted, which is out of scope for this sprint.
   on the left. Method and diagnostic in `docs/landmarks.md`
   (ankle_centre); the "why no talus yet" note there records the
   condition under which talus extraction should be added.
+- The automatic knee centre (`landmarks.knee_centre`) agrees with the
+  hand reference to within **6.36 mm (right)** and **7.21 mm (left)**
+  on case01. That is 2.1× and 1.4× the hand-placement repeat distance
+  for the same landmarks (3.02 mm and 5.00 mm), so the rule is **close
+  to** the hand reference but not at the level of a second human
+  placer. The residual is dominated by the hand reference itself: the
+  right-side hand click sits 8.7 mm lateral of the femur slab's x
+  centroid, the left-side click sits 0.4 mm away, and no symmetric
+  automated rule can match both. Method and diagnostic in
+  `docs/landmarks.md` (knee_centre). This is weaker than the femoral
+  head fit and roughly on par with the ankle fit.

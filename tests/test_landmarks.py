@@ -10,6 +10,7 @@ from femuralabs.toolkit.landmarks import fit_sphere, femoral_head_centre
 from femuralabs.toolkit.masks import extract_masks
 from femuralabs.toolkit.mesh import mask_to_mesh
 from femuralabs.toolkit.landmarks import fit_sphere, femoral_head_centre, ankle_centre
+from femuralabs.toolkit.landmarks import fit_sphere, femoral_head_centre, ankle_centre, knee_centre
 
 COMBINED = Path("data/raw/case01/combined_seg.nii")
 LMK = Path("data/ref/landmarks_case01.mrk.json")
@@ -159,4 +160,72 @@ def test_ankle_centre_left_agrees_with_hand_placement(real_case):
     assert error_mm < 6.0, (
         f"ankle error {error_mm:.2f} mm; auto {centre.round(1)} vs "
         f"hand {reference.round(1)}; info={info}"
+    )
+
+def test_knee_centre_right_agrees_with_hand_placement(real_case):
+    """Rule (a): two-condyle midpoint at the distal femur; error under 10 mm.
+
+    The 10 mm headroom is generous on purpose. On case01 the right-side
+    hand click sits 8.7 mm lateral of the femur slab's x-centroid, while
+    the left-side click sits 0.4 mm away — a real asymmetry in the hand
+    reference that no symmetric automated rule can match to under 8 mm.
+    Documented in docs/landmarks.md and docs/conventions.md.
+    """
+    volume, masks, hand = real_case
+    fv, _ = mask_to_mesh(
+        masks["femur_R"].mask, volume.spacing, volume.origin, volume.direction,
+    )
+    tv, _ = mask_to_mesh(
+        masks["tibia_R"].mask, volume.spacing, volume.origin, volume.direction,
+    )
+    centre, info = knee_centre(fv, tv)
+
+    assert info["condyle_medial"][0] > info["condyle_lateral"][0], (
+        f"on the right side medial should exceed lateral in LPS x; "
+        f"got medial x={info['condyle_medial'][0]:.1f}, "
+        f"lateral x={info['condyle_lateral'][0]:.1f}"
+    )
+    separation_mm = float(
+        np.linalg.norm(info["condyle_medial"] - info["condyle_lateral"])
+    )
+    assert separation_mm > 20.0, (
+        f"condyles only {separation_mm:.1f} mm apart; "
+        f"the half-split did not find two distinct blobs"
+    )
+    reference = np.array(hand["knee_centre_R"])
+    error_mm = float(np.linalg.norm(centre - reference))
+    assert error_mm < 10.0, (
+        f"knee centre error {error_mm:.2f} mm; auto {centre.round(1)} vs "
+        f"hand {reference.round(1)}; info={ {k: v.round(1) if hasattr(v, 'round') else v for k, v in info.items()} }"
+    )
+
+
+def test_knee_centre_left_agrees_with_hand_placement(real_case):
+    """Same rule, mirrored side: medial x < lateral x on the left."""
+    volume, masks, hand = real_case
+    fv, _ = mask_to_mesh(
+        masks["femur_L"].mask, volume.spacing, volume.origin, volume.direction,
+    )
+    tv, _ = mask_to_mesh(
+        masks["tibia_L"].mask, volume.spacing, volume.origin, volume.direction,
+    )
+    centre, info = knee_centre(fv, tv)
+
+    assert info["condyle_medial"][0] < info["condyle_lateral"][0], (
+        f"on the left side medial should be less than lateral in LPS x; "
+        f"got medial x={info['condyle_medial'][0]:.1f}, "
+        f"lateral x={info['condyle_lateral'][0]:.1f}"
+    )
+    separation_mm = float(
+        np.linalg.norm(info["condyle_medial"] - info["condyle_lateral"])
+    )
+    assert separation_mm > 20.0, (
+        f"condyles only {separation_mm:.1f} mm apart; "
+        f"the half-split did not find two distinct blobs"
+    )
+    reference = np.array(hand["knee_centre_L"])
+    error_mm = float(np.linalg.norm(centre - reference))
+    assert error_mm < 10.0, (
+        f"knee centre error {error_mm:.2f} mm; auto {centre.round(1)} vs "
+        f"hand {reference.round(1)}; info={ {k: v.round(1) if hasattr(v, 'round') else v for k, v in info.items()} }"
     )

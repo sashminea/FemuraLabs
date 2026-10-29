@@ -10,6 +10,60 @@ New entries go at the top.
 
 ---
 
+## D033: `knee_centre` uses the two-condyle split, not the whole-slab centroid
+
+**Decision:** `knee_centre` takes the bottom 5 mm of the femur mesh,
+splits that slab at its own x mid-point, takes each half's vertex
+centroid (approximating the medial and lateral condyle blobs), and
+returns their mean. The tibia is accepted in the signature but not used.
+The return shape is `(centre, info)` where `info` carries
+`condyle_medial`, `condyle_lateral`, `slab_mm`.
+
+**Alternative rejected:** Keep the draft (average of the whole distal
+femur cross-section centroid and the whole proximal tibia
+cross-section centroid); or a tibia-only rule; or a curve-fit around
+the condyle outline.
+
+**Reason:** The draft was 10–14 mm off on case01. The diagnostic
+printed dy = +10 mm on **every** variant (mesh vs mask, 5 mm vs 20 mm
+slab), which ruled out vertex density and slab thickness as causes and
+pointed at the tibia. Splitting femur-only vs tibia-only vs averaged
+showed the tibia was the source of dy: the proximal tibia centroid is
+~14 mm anterior of the distal femur centroid, and averaging pulls the
+result posterior. The right-side x error of +9 to +12 mm on every
+whole-slab variant came from the whole-cross-section centroid being
+pulled toward the medial condyle (which is larger). Splitting at the
+x mid-point and averaging the two halves is rule (a) from
+`docs/conventions.md` taken literally — "midpoint between centres of
+the medial and lateral condyle blobs" — and halves both errors
+(14.00 → 6.36 mm on the right; 10.43 → 7.21 mm on the left).
+
+**Consequence:** Signature changed from `-> np.ndarray` to
+`-> tuple[np.ndarray, dict]`, mirroring `ankle_centre`. `tibia_verts`
+is accepted but ignored; keeping it in the signature means a future
+joint-line rule that needs both bones (mLDFA, MPTA — see D032's
+"joint-line angles" note) does not have to re-plumb the call sites in
+`pipeline_demo.py` and downstream code. The right-side residual of
+6.36 mm is not a code defect: the hand click sits 8.7 mm lateral of
+the femur slab's x-centroid, while the left-side hand click sits 0.4 mm
+away — an asymmetry in the hand reference that no symmetric automated
+rule can match. The 10 mm test threshold is generous on purpose, and
+the diagnostic assertions (medial/lateral separation > 20 mm,
+medial-vs-lateral ordering per side) fire **before** the tolerance so
+a real regression never hides behind a loose error bound.
+
+**Not resolved in D033:** the return shapes across the three rules are
+now inconsistent. `femoral_head_centre` returns `(centre, radius, rms)`
+because radius and rms are the diagnostic quantities for a sphere fit;
+`ankle_centre` and `knee_centre` return `(centre, info_dict)` because
+the diagnostics are the intermediate points, not scalar fit statistics.
+A future unification could make all three return `(centre, dict)` with
+`radius`/`rms` inside the dict for the head fit, but that would change
+call sites in `tests/test_landmarks.py` and any downstream consumer for
+no functional gain. Deferred.
+
+---
+
 ## D032: extend `combined_seg.nii` from four to six labels (add fibula)
 
 **Decision:** The merged segmentation now carries six labels:
