@@ -25,6 +25,14 @@ white-dashed = file on disk, grey = external.
 
 ---
 
+## Landmarks: load from Slicer and fit the femoral head
+
+<img src="flow/landmarks-load-fit.png" alt="Landmarks: load from Slicer and fit the femoral head">
+
+Two independent flows meet at the hand reference. Top: `load_landmarks` reads a Slicer `.mrk.json`, checks its `coordinateSystem` field, and returns a dict of landmark names to LPS coordinates — negating x and y only for files that declare RAS, because Slicer 5.x writes LPS by default and negating an already-LPS file puts the head on the wrong side of the body. Bottom: `femoral_head_centre` takes a femur mesh in world millimetres, keeps only the superior 25 percent by z and the medial 20 mm by x, and fits a sphere by linear least squares with iterative outlier trimming. The 20 mm window is what excludes the greater trochanter from the fit; without it the radius comes out around 35 mm instead of the anatomical 17–25 mm. Comparing the loaded hand reference against the fitted sphere centre is the D08 validation; both flows are only useful together.
+
+---
+
 <!-- INSERT HERE -->
 
 

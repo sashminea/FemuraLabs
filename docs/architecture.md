@@ -30,7 +30,7 @@
       -> extract femur/tibia masks                     [masks.py]
       -> mesh per bone (marching cubes, mm)            [mesh.py]
       -> mesh verification (watertight, volume)        [mesh.py]      
-      -> landmarks (hip, knee, ankle)                  [landmarks.py  - pending]
+      -> landmarks (hip, knee, ankle)                  [landmarks.py]
       -> alignment angles (HKA, mLDFA, MPTA)           [alignment.py  - pending]
       -> comparison with TotalSegmentator              [metrics.py    - pending]
       -> validation report                             [reports/validation.md]

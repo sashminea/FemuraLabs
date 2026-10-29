@@ -10,6 +10,92 @@ New entries go at the top.
 
 ---
 
+## D031: femoral head fit constrained to a medial window
+
+**Decision:** `femoral_head_centre` takes the top 25 percent of the femur
+by z, then keeps only vertices within `medial_window_mm` (default 20 mm)
+of the medial-most x. A linear sphere fit is applied to that region with
+iterative outlier trimming.
+
+**Alternative rejected:** Fit the whole proximal femur, or use a fixed
+z-region without medial constraint, or use a curvature-based region
+growing algorithm.
+
+**Reason:** A fit to the whole proximal femur captures head, neck and
+greater trochanter as one shape, giving a fit radius of 30–37 mm
+(physiologically implausible for an adult femoral head) and a centre
+that lands between the head and the trochanter. On case01, this produces
+errors of 20–35 mm against the hand-placed reference. Constraining to
+the medial window captures the medial hemisphere of the head, which is
+enough to fix the sphere centre, and gives errors of 3.8 and 4.8 mm on
+the two sides. The radius check (17–25 mm range) is what catches the
+fit drifting onto the trochanter.
+
+**Consequence:** The default `medial_window_mm=20` is a starting point
+that works for typical adult femoral heads. For subjects with unusually
+small or large heads, the correct window must be found by the diagnostic
+sweep described in `docs/landmarks.md`. A future iteration could
+automate that sweep: try windows in ascending order and take the first
+one that returns a radius in the anatomical range. That is not done in
+D08 because a single-subject reference cannot validate the automatic
+window selection.
+
+
+## D030: `load_landmarks` respects the file's coordinate-system field
+
+**Decision:** `load_landmarks(path)` reads each markup's
+`coordinateSystem` field and negates x and y only when the field is
+`"RAS"`. Files declaring `"LPS"` (Slicer 5.x default) are returned
+unchanged. Unset field is treated as LPS.
+
+**Alternative rejected:** Assume all Slicer files are RAS and always
+negate x and y.
+
+**Reason:** Slicer 5.12 saves `.mrk.json` with
+`"coordinateSystem": "LPS"`. The pipeline's first pass double-negated
+x and y (once from the loader, once from the file's LPS interpretation),
+which put every femoral head on the posterior side of the body — visible
+as a 290 mm error between the loaded landmark and the mask centroid, but
+silent to any code that did not have a reference to compare against. The
+fix is to trust the file's declared coordinate system, not to assume one.
+
+**Consequence:** A RAS-declaring Slicer file (older Slicer versions, or
+files converted from another tool) will still be handled correctly.
+A future decision that changes the pipeline to RAS would need to invert
+the branch but not the field reading.
+
+
+## D029: label sides by anatomy, not by screen position
+
+**Decision:** In all landmark files, `_R` suffixes mean the patient's
+right side, which appears on the **left** of Slicer's default axial view
+(radiological convention, viewed from the feet). The landmark placement
+guide in `docs/landmark_placement.md` states this explicitly and
+instructions for each `_R` landmark say "check the axial view's corner
+labels".
+
+**Alternative rejected:** Label by screen position ("the one on the
+right of the screen").
+
+**Reason:** The first placement session on case01 labeled screen-right
+as `_R`, which gave femoral head positions of +94 mm LPS x for `_R`
+(wrong: that is the patient's left) and −71 mm for `_L` (wrong: that is
+the patient's right). The error was not caught by any test until a
+comparison against the mask centroid, which has the correct sign. The
+fix requires the convention to be stated everywhere a landmark is
+described.
+
+**Consequence:** Any future landmark file must have `_R` landmarks on the
+negative-x side (LPS) and `_L` landmarks on the positive-x side. A
+future test that asserts this on the loaded `femoral_head_R` and
+`femoral_head_L` would catch the swap before it reaches downstream
+computation. The current test suite does not assert this directly; it is
+caught indirectly because a swap produces a 300 mm error against the
+mask centroid in `test_femoral_head_right_agrees_with_hand_placement`.
+A direct assertion is worth adding in D09.
+
+---
+
 ## D028: `is_watertight` tolerates a small fraction of non-manifold edges
 
 **Decision:** `is_watertight(verts, faces, tol=0.001)` returns True if the

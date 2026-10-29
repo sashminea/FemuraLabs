@@ -21,6 +21,17 @@ def test_ras_to_lps_conversion(tmp_path):
     assert result["femoral_head_R"] == (-100.0, -200.0, 50.0)
     assert result["knee_centre_R"] == (10.0, -5.0, -100.0)
 
+def test_lps_file_passes_through_unchanged(tmp_path):
+    path = tmp_path / "landmarks.mrk.json"
+    path.write_text(json.dumps({
+        "markups": [{
+            "coordinateSystem": "LPS",
+            "controlPoints": [
+                {"label": "femoral_head_R", "position": [-94.2, -156.3, 1100.0]},
+            ]
+        }]
+    }))
+    assert load_landmarks(path)["femoral_head_R"] == (-94.2, -156.3, 1100.0)
 
 def test_unnamed_point_falls_back_to_index(tmp_path):
     path = tmp_path / "landmarks.mrk.json"

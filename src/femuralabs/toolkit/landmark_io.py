@@ -6,19 +6,21 @@ from pathlib import Path
 
 
 def load_landmarks(path: Path | str) -> dict[str, tuple[float, float, float]]:
-    """Return {name: (x, y, z)} from a Slicer .mrk.json file.
+    """Return {name: (x, y, z)} from a Slicer .mrk.json file in LPS.
 
-    Slicer stores points in RAS millimetres; this function converts to LPS
-    (x and y negated) so the result matches SimpleITK's world frame and
-    the pipeline's Volume.origin.
+    Slicer writes ``coordinateSystem`` for each markup. If it says RAS,
+    negate x and y to get LPS (the pipeline's frame). If it says LPS (the
+    default in Slicer 5.x), the values are already in LPS — do not negate.
+    An unset field is treated as LPS, matching Slicer's own default.
     """
     data = json.loads(Path(path).read_text())
     result: dict[str, tuple[float, float, float]] = {}
     for markup in data.get("markups", []):
+        cs = markup.get("coordinateSystem", "LPS")
         for i, cp in enumerate(markup.get("controlPoints", [])):
             name = cp.get("label") or f"point_{i}"
             x, y, z = cp["position"]
-            result[name] = (-x, -y, z)
+            result[name] = (-x, -y, z) if cs == "RAS" else (x, y, z)
     return result
 
 

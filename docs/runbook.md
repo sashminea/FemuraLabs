@@ -787,3 +787,72 @@ file lives outside its own subject folder.
 `tests/test_pipeline_demo.py` pins the schema and determinism on a
 synthetic volume; run `pytest tests/test_pipeline_demo.py -v` for the
 check.
+
+## Loading hand-placed landmarks
+
+Reads a Slicer `.mrk.json` and returns `{name: (x, y, z)}` in LPS
+millimetres. The loader respects the file's `coordinateSystem` field:
+RAS files are negated in x and y to give LPS; LPS files are returned
+unchanged.
+
+    PYTHONPATH=src python -c "from femuralabs.toolkit.landmark_io import load_landmarks; \
+      h = load_landmarks('data/ref/landmarks_case01.mrk.json'); \
+      [print(f'{k:<22}', tuple(round(v,1) for v in val)) for k, val in h.items()]"
+
+Expected on case01 (verify sign of x: `_R` landmarks have negative x,
+`_L` landmarks have positive x, in LPS):
+
+    femoral_head_R         (-70.8, -148.1, 1084.5)
+    femoral_head_L         (94.2, -156.3, 1100.0)
+    knee_centre_R          (-71.2, -127.9, 663.3)
+    knee_centre_L          (81.9, -114.0, 685.0)
+    ankle_centre_R         (-52.4, -76.4, 305.2)
+    ankle_centre_L         (90.5, -89.9, 320.6)
+
+If any `_R` landmark has positive x, the left/right labels are swapped
+in the file. Fix by swapping suffixes in the `.mrk.json` (see
+`docs/landmarks.md` trap 2).
+
+## Femoral head centre by sphere fit
+
+Extracts the femur mesh, fits a sphere to the medial hemisphere of the
+proximal region, prints the fit centre and residual. Compares against
+the hand-placed reference.
+
+    PYTHONPATH=src python -c "
+    import numpy as np
+    from femuralabs.toolkit.io_volume import load_volume
+    from femuralabs.toolkit.masks import extract_masks
+    from femuralabs.toolkit.mesh import mask_to_mesh
+    from femuralabs.toolkit.landmarks import femoral_head_centre
+    from femuralabs.toolkit.landmark_io import load_landmarks
+    v = load_volume('data/raw/case01/combined_seg.nii')
+    m = extract_masks(v); h = load_landmarks('data/ref/landmarks_case01.mrk.json')
+    for side in ('R', 'L'):
+        verts, _ = mask_to_mesh(m[f'femur_{side}'].mask, v.spacing, v.origin, v.direction)
+        centre, radius, rms = femoral_head_centre(verts)
+        ref = np.array(h[f'femoral_head_{side}'])
+        print(f'femur_{side}: fit {centre.round(1)}, hand {ref.round(1)}, '
+              f'error {np.linalg.norm(centre-ref):.2f} mm, '
+              f'radius {radius:.1f} mm, rms {rms:.2f} mm')
+    "
+
+Expected on case01 with default `medial_window_mm=20`:
+
+    femur_R: fit (-73.3, -145.4, 1085.2), hand (-70.8, -148.1, 1084.5), error 3.81 mm, radius 18.3 mm, rms ~1 mm
+    femur_L: fit (92.5, -156.8, 1104.5), hand (94.2, -156.3, 1100.0), error 4.82 mm, radius 20.4 mm, rms ~1 mm
+
+Both errors are inside the hand-placement repeat distance for the same
+point (4.26 and 6.21 mm). The automatic fit is at the level of a second
+human placer.
+
+**Radius diagnostic.** An adult femoral head is 17–25 mm radius. A fit
+that returns 30+ mm has picked up the trochanter alongside the head
+and is not the head centre. If the fit returns an out-of-range radius,
+the medial window is wrong for this subject; see
+`docs/landmarks.md` ("Extending to case02 and case03") for the sweep
+diagnostic.
+
+`tests/test_landmarks.py` pins the radius range and the 10 mm error
+threshold against the case01 hand reference. Run
+`pytest tests/test_landmarks.py -v` for the check.
