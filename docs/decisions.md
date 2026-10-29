@@ -3,10 +3,51 @@
 Architectural choices that a reader might reasonably want to reverse.
 Each entry: **Decision**, **Alternative rejected**, **Reason**,
 **Consequence**. Entries are numbered from the original sequence; gaps are
-entries pruned during a 27 October 2026 documentation cleanup. Only the
+entries pruned during documentation cleanup. Only the
 decisions still load-bearing for the current code are recorded.
 
 New entries go at the top.
+
+---
+
+## D035: HKA deviation and MAD sign convention — varus positive, side-detected
+
+**Decision:** `hka_deviation` and `mad` return **positive for varus**
+(knee lateral of the hip-ankle line, distal segment tilted toward the
+body midline) and **negative for valgus**. "Lateral" is side-dependent
+— the right leg's lateral direction is −x in LPS, the left leg's is +x
+— and the code detects the side from the sign of `hip[0]`, so the same
+signed number carries the same anatomical meaning on both sides.
+
+**Alternative rejected:** (a) Return the absolute value, forcing the
+caller to know the side; (b) use a `side` parameter the caller passes;
+(c) return the unsigned angle for HKA and a signed mm for MAD only.
+
+**Reason:** An absolute value throws away the information that
+distinguishes a varus knee from a valgus one — a clinician reading
+"+6° varus" reads a surgical indication, whereas a clinician reading
+"6°" cannot tell which operation is on the table. A `side` parameter
+duplicates information already in `hip[0]`, and creates a place where a
+wrong value silently flips the sign of the output. Returning the sign
+on both scalars means every downstream consumer (per-case table, later
+Bland-Altman on angle differences, the validation report) works in one
+signed convention throughout.
+
+**Consequence:** `hip[0] == 0` raises `ValueError` — a midline hip
+would produce an ambiguous output and is not a realistic landmark
+anyway. The sign is tested with four synthetic cases: right-leg
+varus, left-leg varus (both positive); right-leg valgus (negative);
+straight (zero on both sides). The side detector lives in
+`_leg_side`, one three-line function, so a future change to the
+convention (say, medial positive for a different downstream tool)
+edits one function and one set of tests, not every caller. Direction
+of the along-bone vector is not modelled — both `hk` and `ka` are
+used as-is, so a caller that reverses one of the points gets a
+180° answer instead of the HKA deviation. The helper
+`knee_error_to_angle_deg(error_mm, segment_mm)` exists so a future
+caller who is worried about knee-centre placement noise can convert
+a mm error to an angle error at the same segment length; on case01
+with 2 mm noise over a 420 mm femur that is ~0.27°.
 
 ---
 

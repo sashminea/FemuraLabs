@@ -151,3 +151,19 @@ is attempted, which is out of scope for this sprint.
   automated rule can match both. Method and diagnostic in
   `docs/landmarks.md` (knee_centre). This is weaker than the femoral
   head fit and roughly on par with the ankle fit.
+
+## Alignment angle sign convention
+
+HKA deviation and MAD are signed: **positive = varus**, **negative =
+valgus**, zero = straight. This is the convention `alignment.hka_deviation`
+and `alignment.mad` implement (see `docs/decisions.md` D035).
+
+"Lateral" is anatomical, not world-coordinate. On the patient's right
+side (hip x < 0 in LPS), lateral is −x; on the left side (hip x > 0),
+lateral is +x. The functions detect the side from the sign of the hip's
+x coordinate, so the same positive number means "varus" on both sides.
+An absolute value without a sign would lose the varus/valgus distinction
+that drives every clinical reading of these numbers.
+
+A limb with hip at x = 0 is rejected with `ValueError` — the side is
+ambiguous at the midline and no realistic landmark sits there.

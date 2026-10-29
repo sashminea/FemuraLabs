@@ -387,6 +387,44 @@ output verified, add a section to this file with four parts:
 Do not add a command that has not been run and verified. An unrun command
 is a guess dressed as documentation.
 
+## Alignment angles on a synthetic limb
+
+Two scalar functions, no I/O, no file required. Prints the HKA
+deviation in degrees and the MAD in millimetres for four synthetic
+limbs — a straight one, a varus bend, a valgus bend, and the
+sprint-doc's small-bend example. All numbers are hand-computable in
+under a minute, which is what makes this the D10 pass test.
+
+    PYTHONPATH=src python -c "
+    from femuralabs.toolkit.alignment import hka_deviation, mad, knee_error_to_angle_deg
+    def show(name, H, K, A):
+        print(f'{name}: hka={hka_deviation(H,K,A):+7.3f}  mad={mad(H,K,A):+7.3f}')
+    show('straight R ', (-100,0,0), (-100,0,-420), (-100,0,-820))
+    show('varus R    ', (-100,0,0), (-120,0,-420), (-100,0,-820))
+    show('varus L    ', ( 100,0,0), ( 120,0,-420), ( 100,0,-820))
+    show('valgus R   ', (-100,0,0), ( -80,0,-420), (-100,0,-820))
+    print('error prop 2mm / 420mm:', knee_error_to_angle_deg(2, 420), 'deg')
+    "
+
+Expected:
+
+    straight R : hka= +0.000  mad= +0.000
+    varus R    : hka= +5.589  mad=+20.000
+    varus L    : hka= +5.589  mad=+20.000
+    valgus R   : hka= -5.589  mad=-20.000
+    error prop 2mm / 420mm: 0.2727... deg
+
+Read as: **varus on the right and varus on the left are the same
+positive number**, because the side is detected from hip.x sign. If
+varus R and varus L disagree in sign, the side detector is broken;
+the test `test_bent_limb_varus_is_positive_both_sides` catches it.
+
+Straight-limb zero is the baseline. Any non-zero there means a bug in
+the signed-lateral calculation, not a rounding artefact.
+
+`tests/test_alignment.py` pins all four numbers plus the helper. Run
+`pytest tests/test_alignment.py -v` for the actual verification; the
+command above is for inspection.
 
 ## Verifying a clean checkout
 

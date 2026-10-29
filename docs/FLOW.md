@@ -25,15 +25,24 @@ white-dashed = file on disk, grey = external.
 
 ---
 
+## Alignment: HKA deviation and MAD from three points
+
+<img src="flow/alignment-hka-mad.png" alt="Alignment: HKA deviation and MAD from three points">
+
+hka_deviation and mad take three LPS points (hip, knee, ankle) and return a signed scalar — degrees and mm respectively. Both call _signed_lateral_mm to decide the sign from which side of the hip-ankle line the knee sits, and _leg_side to decide which direction is lateral for this patient. The convention is varus-positive, side-detected; D035 records the choice. Synthetic tests in tests/test_alignment.py pin four limbs with hand-computed answers.
+
+---
+
+<!-- INSERT HERE -->
+
+
+---
+
 ## Landmarks: three automatic rules from mesh vertices
 
 <img src="flow/landmarks-three-rules.png" alt="Landmarks: three automatic rules from mesh vertices">
 
 Three rules compute a landmark from mesh vertices, each with its own inputs and return shape: femoral_head_centre (femur verts → centre, radius, rms), ankle_centre (tibia + fibula verts → centre, info), knee_centre (femur verts, tibia unused → centre, info). All three compare to load_landmarks' hand reference in tests/test_landmarks.py; the mm residuals in docs/landmarks.md come from that comparison. The differing return shapes are recorded in D033, with unification deferred.
-
----
-
-<!-- INSERT HERE -->
 
 ---
 
