@@ -106,9 +106,15 @@ cross-sectional body of the talus.
 - Off-centre anterior/posterior — visible in axial as a point at
   the front or back of the talus body rather than in its middle.
 
+<img width="1002" height="862" alt="image" src="https://github.com/user-attachments/assets/adc60c48-f548-40f8-986b-86c001b49701" />
+
+
 ### `ankle_centre_L`
 
 Same steps, left side.
+
+<img width="1024" height="859" alt="image" src="https://github.com/user-attachments/assets/2d84f4c3-31d5-4548-84cf-09bc04fe2b1a" />
+
 
 ### `condyle_medial_R`
 
@@ -143,6 +149,9 @@ converts the surface click into a midpoint anchor.
 
 Same steps as `condyle_medial_R`, on the lateral (outer) side.
 Faces away from the other leg.
+
+<img width="1000" height="862" alt="image" src="https://github.com/user-attachments/assets/1ca70fb9-c6e0-426d-a955-b0d936344e1b" />
+
 
 ### `plateau_medial_R`
 
@@ -184,6 +193,8 @@ edge of the upper right shin bone.
 - Floating in the knee gap.
 - Sunk too deep into the bone centre rather than on the outer
   boundary.
+<img width="1022" height="862" alt="image" src="https://github.com/user-attachments/assets/d0b4f150-9075-4991-bfb2-f9d0d36eccc7" />
+
 
 ### Left-side surface landmarks (`condyle_*_L`, `plateau_*_L`)
 
