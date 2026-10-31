@@ -273,7 +273,8 @@ boundary of the right thigh bone.
 - Floating above the joint line — visible in coronal as a point not
   touching the condyle surface.
 
-<img width="1037" height="862" alt="image" src="https://github.com/user-attachments/assets/8c5786ff-f37d-450f-9d97-3a3cc37d8e2e" />
+<img width="1032" height="862" alt="image" src="https://github.com/user-attachments/assets/2186a7f8-bd16-46f3-8eb2-287980fa848e" />
+
 
 
 **Anchor note:** this landmark is defined as "the intersection of two
@@ -282,13 +283,15 @@ medial-most and lateral-most points on the condyle's joint-line edge
 separately, then use their midpoint as the landmark. That converts the
 surface click into a midpoint anchor.
 
+
+
 ### `condyle_lateral_R`
 
 Same steps as `condyle_medial_R`, on the lateral (outer) side. Faces
 away from the other leg.
 
-<img width="1032" height="862" alt="image" src="https://github.com/user-attachments/assets/2186a7f8-bd16-46f3-8eb2-287980fa848e" />
 
+<img width="1037" height="862" alt="image" src="https://github.com/user-attachments/assets/8c5786ff-f37d-450f-9d97-3a3cc37d8e2e" />
 
 ### `plateau_medial_R`
 
@@ -308,8 +311,6 @@ the upper right shin bone.
 **Common mistakes:**
 - Placed on the lateral plateau by mistake.
 - Floating in the joint gap above the plateau.
-
-<img width="1046" height="862" alt="image" src="https://github.com/user-attachments/assets/af1c80bd-a0c1-4440-adff-e81eb4d28f35" />
 
 
 ### `plateau_lateral_R`
