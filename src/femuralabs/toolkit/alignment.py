@@ -108,3 +108,63 @@ def knee_error_to_angle_deg(error_mm: float, segment_length_mm: float) -> float:
             f"segment_length_mm must be positive, got {segment_length_mm}"
         )
     return float(np.degrees(np.arctan(error_mm / segment_length_mm)))
+
+def project_to_plane(v, normal=(0.0, 1.0, 0.0)):
+    """Project vector v onto the plane defined by `normal`."""
+    v = np.asarray(v, dtype=float)
+    n = np.asarray(normal, dtype=float)
+    n = n / np.linalg.norm(n)
+    return v - np.dot(v, n) * n
+
+
+def _angle_between(u, v):
+    """Angle between two vectors, in degrees, within [0, 180]."""
+    u = np.asarray(u, dtype=float)
+    v = np.asarray(v, dtype=float)
+    cos_theta = float(np.clip(np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v)), -1.0, 1.0))
+    return float(np.degrees(np.arccos(cos_theta)))
+
+
+def _angle_between_acute(u, v):
+    """Acute angle between two vectors, in degrees, always <= 90."""
+    a = _angle_between(u, v)
+    return a if a <= 90.0 else 180.0 - a
+
+
+def mldfa(hip, knee, condyle_medial, condyle_lateral) -> float:
+    """Mechanical Lateral Distal Femoral Angle (mLDFA), in degrees.
+
+    The acute lateral angle between the proximal femoral mechanical axis
+    (K->H) and the distal femoral joint line (medial->lateral). Typical
+    value is ~87 degrees.
+    """
+    hip = np.asarray(hip, dtype=float)
+    knee = np.asarray(knee, dtype=float)
+    condyle_medial = np.asarray(condyle_medial, dtype=float)
+    condyle_lateral = np.asarray(condyle_lateral, dtype=float)
+
+    axis_prox = project_to_plane(hip - knee)
+    joint_lat = project_to_plane(condyle_lateral - condyle_medial)
+    return _angle_between_acute(axis_prox, joint_lat)
+
+
+def mpta(knee, ankle, plateau_medial, plateau_lateral) -> float:
+    """Medial Proximal Tibial Angle (MPTA), in degrees.
+
+    The acute medial angle between the distal tibial mechanical axis
+    (K->A) and the proximal tibial joint line (medial->lateral).
+    Typical value is ~87 degrees.
+
+    The "always acute" clip matters here: the distal-axis points down
+    while the medial-end-of-the-joint-line points up, so the raw angle
+    between them is the obtuse supplement (>90). The clinical MPTA is
+    the acute side (<90).
+    """
+    knee = np.asarray(knee, dtype=float)
+    ankle = np.asarray(ankle, dtype=float)
+    plateau_medial = np.asarray(plateau_medial, dtype=float)
+    plateau_lateral = np.asarray(plateau_lateral, dtype=float)
+
+    axis_dist = project_to_plane(ankle - knee)
+    joint_med = project_to_plane(plateau_medial - plateau_lateral)
+    return _angle_between_acute(axis_dist, joint_med)

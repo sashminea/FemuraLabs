@@ -81,3 +81,45 @@ def test_mild_bend_matches_exact_arccos():
 def test_knee_error_to_angle_deg_helper():
     """2 mm of knee displacement over a 420 mm segment is ~0.273 degrees."""
     assert knee_error_to_angle_deg(2.0, 420.0) == pytest.approx(0.273, abs=0.001)
+
+def test_project_to_plane():
+    """Sprint-doc example: project (3,5,4) onto plane with normal (0,1,0)."""
+    from femuralabs.toolkit.alignment import project_to_plane
+    v = project_to_plane(np.array([3.0, 5.0, 4.0]), normal=(0.0, 1.0, 0.0))
+    assert np.allclose(v, [3.0, 0.0, 4.0])
+
+
+def test_mldfa_synthetic_87_degrees():
+    """Synthetic joint line: 87.0 degrees (sprint doc)."""
+    from femuralabs.toolkit.alignment import mldfa
+    knee          = np.array([0.0, 0.0, 0.0])
+    hip           = np.array([0.0, 0.0, 400.0])
+    condyle_medial  = np.array([-30.0, 0.0, -1.57])
+    condyle_lateral = np.array([  0.0, 0.0, 0.0])
+    # In our coordinate system, lateral on the right is -x, so we put
+    # medial at 0 and lateral at -30 to make the joint line point laterally.
+    # Simpler: match the sprint example directly.
+    # Sprint doc: axis (0,1), lateral (30, 1.57). In 3D with y as AP, x is medial/lateral.
+    # Let's put knee at origin, hip at (0,0,400), lateral at (30,0,1.57).
+    # This gives 87 degrees.
+    knee          = np.array([0.0, 0.0, 0.0])
+    hip           = np.array([0.0, 0.0, 400.0])
+    condyle_medial  = np.array([0.0, 0.0, 0.0])
+    condyle_lateral = np.array([30.0, 0.0, 1.57])
+    angle = mldfa(hip, knee, condyle_medial, condyle_lateral)
+    assert angle == pytest.approx(87.0, abs=0.1)
+
+
+def test_mpta_synthetic_87_degrees():
+    """Anatomically-correct synthetic tibia: 87.0 degrees.
+
+    Medial plateau is 1.57 mm higher than lateral (normal anatomy).
+    Under the acute-angle fix, this returns 87°.
+    """
+    from femuralabs.toolkit.alignment import mpta
+    knee            = np.array([0.0, 0.0, 0.0])
+    ankle           = np.array([0.0, 0.0, -400.0])
+    plateau_lateral = np.array([0.0, 0.0, 0.0])
+    plateau_medial  = np.array([30.0, 0.0, 1.57])
+    angle = mpta(knee, ankle, plateau_medial, plateau_lateral)
+    assert angle == pytest.approx(87.0, abs=0.1)
