@@ -179,3 +179,4 @@ segmentations". Summary:
   labels arrive in a different order, and there is no error message.
   The table in "Segment labels" above is the authoritative mapping;
   the merge script must match it line for line.
+- **Split-volume subjects have an MRML shortcut.** Some Zenodo zips (like subject 045Y.F in `010.zip`) contain two separate CT volumes (`...266` and `...269`) instead of one full-limb volume. Do not try to stack these in Python. Instead, open the `...mrml` scene file in Slicer. It automatically loads the unified full-limb volume and aligns both halves. For standard single-volume subjects, just load the `.nrrd` directly.

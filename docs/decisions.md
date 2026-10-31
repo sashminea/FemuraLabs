@@ -10,6 +10,30 @@ New entries go at the top.
 
 ---
 
+## D037: mLDFA and MPTA return the acute angle between the axis and joint line
+
+**Decision:** `mldfa` and `mpta` return `min(angle, 180 - angle)`. The
+return value is always ≤ 90 degrees.
+
+**Alternative rejected:** Return the raw vector dot-product angle (0–180
+degrees).
+
+**Reason:** The joint line is a line, not a ray. The mechanical axis is
+a ray pointing away from the joint. A dot product between these two
+vectors can yield an obtuse angle (e.g., > 90 degrees) if the chosen
+endpoints place the vector directions in opposition. Clinical
+definitions of mLDFA and MPTA always refer to the *acute* angle between
+the axis and the joint line (typical values 85–90 degrees). The
+`min(angle, 180 - angle)` step calculates exactly that.
+
+**Consequence:** Both functions now match the sprint doc's 87-degree
+synthetic test. On real data, case02 R (HKA -1.4, mild valgus) gives
+MPTA 87.2, matching textbook anatomy. Case01 R (HKA +6.2, varus) gives
+MPTA 71.3, correctly reflecting the pathological varus tilt captured by
+the hand landmarks.
+
+---
+
 ## D036: Split-volume subjects are resolved via the MRML scene, not manual stacking
 
 **Decision:** When a subject's ZIP contains separate `Pelvis-Thighs` and `Shanks-Feet` CT volumes (as seen in `010.zip` / subject 045Y.F), the pipeline does not attempt to resample and stack them in Python. Instead, the MRML scene file provided by the dataset authors is opened in Slicer, which loads the unified full-limb volume and aligns both segmentations automatically.

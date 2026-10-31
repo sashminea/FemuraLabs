@@ -426,6 +426,50 @@ the signed-lateral calculation, not a rounding artefact.
 `pytest tests/test_alignment.py -v` for the actual verification; the
 command above is for inspection.
 
+## Joint-line angles (mLDFA, MPTA)
+
+Measures the angle between the mechanical axis and the joint line.
+Both return the acute angle (≤ 90°), per D037.
+
+    PYTHONPATH=src python -c "
+    import numpy as np
+    from femuralabs.toolkit.landmark_io import load_landmarks
+    from femuralabs.toolkit.alignment import hka_deviation, mldfa, mpta
+    h = load_landmarks('data/ref/landmarks_case02.mrk.json')
+    hip, knee, ankle = np.array(h['femoral_head_R']), np.array(h['knee_centre_R']), np.array(h['ankle_centre_R'])
+    c_med, c_lat = np.array(h['condyle_medial_R']), np.array(h['condyle_lateral_R'])
+    p_med, p_lat = np.array(h['plateau_medial_R']), np.array(h['plateau_lateral_R'])
+    print('HKA  :', round(hka_deviation(hip, knee, ankle), 2))
+    print('mLDFA:', round(mldfa(hip, knee, c_med, c_lat), 2))
+    print('MPTA :', round(mpta(knee, ankle, p_med, p_lat), 2))
+    "
+
+Expected on case02 R:
+    HKA  : -1.39
+    mLDFA: 86.75
+    MPTA : 87.23
+
+The acute-angle convention (`min(angle, 180 - angle)`) is required
+because the joint line is a line, not a ray. A varus knee will produce
+an MPTA below 87 (e.g., case01 R at 71.3). A valgus or neutral knee
+will sit closer to 87–90.
+
+### Run all four alignment metrics on one case
+
+    PYTHONPATH=src python -c "
+    import numpy as np
+    from femuralabs.toolkit.landmark_io import load_landmarks
+    from femuralabs.toolkit.alignment import hka_deviation, mad, mldfa, mpta
+
+    h = load_landmarks('data/ref/landmarks_case02.mrk.json')
+    for side in ('R', 'L'):
+        if f'condyle_medial_{side}' not in h: continue
+        hip = np.array(h[f'femoral_head_{side}']); knee = np.array(h[f'knee_centre_{side}']); ankle = np.array(h[f'ankle_centre_{side}'])
+        c_med = np.array(h[f'condyle_medial_{side}']); c_lat = np.array(h[f'condyle_lateral_{side}'])
+        p_med = np.array(h[f'plateau_medial_{side}']); p_lat = np.array([f'plateau_lateral_{side}'])
+        print(f'Side {side}: HKA={hka_deviation(hip, knee, ankle):+.2f} MAD={mad(hip, knee, ankle):+.2f} mLDFA={mldfa(hip, knee, c_med, c_lat):.2f} MPTA={mpta(knee, ankle, p_med, p_lat):.2f}')
+    "
+
 ## Verifying a clean checkout
 
 Proves that the files tracked by git are enough to reproduce the project.
@@ -500,25 +544,13 @@ do not reach the ankle.
    `SMIR.Lower_limb.051Y.F.CT.168_1/CT.168.nrrd`. Confirm in
    `Modules → Volumes → Volume Information` that `Image Dimensions` reads
    512, 512, 1637.
-2. `File → Add Data` and open
-   `...-Pelvis-Thighs_Reconstruction.seg.nrrd`.
-3. In `Modules → Segmentations`, set **Source volume** to
-   `SMIR.Lower_limb_051Y.F.CT.168_1` (no suffix, the full volume).
-4. Click the small icon immediately to the right of the Source volume
-   dropdown (the one that opens a **"Segment geometry"** dialog). In that
-   dialog, confirm:
-   - Source geometry is `SMIR.Lower_limb_051Y.F.CT.168_1`.
-   - Dimensions are 512, 512, 1637.
-   - Spacing is 0.9765625, 0.9765625, 0.6997555.
-   Click **OK**. This step resamples the segmentation onto the full-limb
-   grid; without it the export produces a crop-sized file.
-5. In the same Segmentations module, scroll to the **"Export to files"**
-   section and expand it. Set:
-   - **File format**: `NIFTI (.nii.gz)` or `NIFTI (.nii)` (both work;
-     `.nii` is what SimpleITK reads without decompression).
+2. `File → Add Data` and open the `_Reconstruction.seg.nrrd` file.
+3. In `Modules → Segment Editor` (NOT Segmentations), set **Source volume** to the full-limb CT volume.
+4. Click the small icon immediately to the right of the Source volume dropdown (the **"Segment geometry"** dialog). Confirm the dimensions and spacing match the full CT volume. Click **OK**.
+5. In `Modules → Segmentations` (NOT Segment Editor), scroll to the **"Export to files"** section.
+   - **File format**: `NIFTI (.nii)` (NOT `.nii.gz`).
    - **Destination folder**: any Windows-side folder.
-   - The **File name** is not editable here — it is derived from the
-     segmentation name. Click **Export**.
+   - The **File name** is derived from the segmentation name and is not editable. Click **Export**.
 6. Slicer writes two files into the destination folder:
    - `SMIR.Lower_limb.051Y.F.CT.168-Pelvis-Thighs_Reconstruction.nii`
      (or `.nii.gz`).
@@ -977,3 +1009,42 @@ If a subject's folder contains two CT volumes (e.g., `CT.266` and `CT.269`):
 4. Follow the standard export procedure from "Combining the two reference segmentations" (Slicer segment geometry → NIfTI → `merge_segmentation.py`).
 
 If the MRML file is missing, the subject is considered unusable. Do not attempt to manually stack the halves.
+
+## Diagnostic scripts (Appendix)
+
+These short scripts are used to verify data integrity after merges, before running the main pipeline.
+
+### Verify mask sides and volumes (LPS check)
+Run this after merging a new subject to ensure the left/right orientation didn't flip and the bone volumes are anatomically plausible.
+
+    PYTHONPATH=src python -c "
+    import numpy as np
+    from femuralabs.toolkit.io_volume import load_volume
+    from femuralabs.toolkit.masks import extract_masks
+    v = load_volume('data/raw/caseXX/combined_seg.nii')
+    m = extract_masks(v)
+    for name, b in m.items():
+        print(f'{name:<9} {b.voxel_count:>8} {b.volume_ml:>7.1f} mL  x={b.centroid_world[0]:>7.1f}')
+    print('femur OK' if m['femur_L'].centroid_world[0] > m['femur_R'].centroid_world[0] else 'FEMUR SWAPPED')
+    "
+
+### Verify hand-placed landmarks
+Run this after saving a `.mrk.json` file to ensure all 10 points are present, on the correct side (x-sign), and resting on the bone mask.
+
+    PYTHONPATH=src python -c "
+    import numpy as np
+    from femuralabs.toolkit.landmark_io import load_landmarks
+    from femuralabs.toolkit.io_volume import load_volume
+    from femuralabs.toolkit.masks import extract_masks
+    h = load_landmarks('data/ref/landmarks_caseXX.mrk.json')
+    v = load_volume('data/raw/caseXX/combined_seg.nii')
+    m = extract_masks(v)
+    D = np.array(v.direction).reshape(3,3); S = np.array(v.spacing); O = np.array(v.origin)
+    def min_dist(pt, mask):
+        zi, yi, xi = np.where(mask)
+        xyz = np.stack([xi, yi, zi], axis=1)
+        return float(np.linalg.norm(O + (xyz * S) @ D.T - pt, axis=1).min())
+    for name, bone in [('femoral_head_R', 'femur_R'), ('knee_centre_R', 'femur_R'), ('ankle_centre_R', 'tibia_R'), ('condyle_medial_R', 'femur_R'), ('plateau_medial_R', 'tibia_R')]:
+        if name in h:
+            print(f'{name:<20} x={h[name][0]:>7.1f}  dist_to_bone={min_dist(np.array(h[name]), m[bone].mask):.2f} mm')
+    "
