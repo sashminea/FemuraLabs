@@ -207,9 +207,15 @@ hip ball, not on its surface. Sagittal — same.
   below the largest circle.
 - Wrong side — check the R/L corners of the axial view.
 
+<img width="1050" height="862" alt="image" src="https://github.com/user-attachments/assets/8fba6442-f57c-46e5-8490-0b88a65494e1" />
+
+
 ### `femoral_head_L`
 
 Same steps, left side. Mirror image.
+
+<img width="1033" height="862" alt="image" src="https://github.com/user-attachments/assets/e9f66c4d-734f-4728-bace-84d48b92ea8f" />
+
 
 ### `knee_centre_R`
 
@@ -234,9 +240,15 @@ joint space between femur and tibia, at the level of the joint line.
   coronal as a point below the joint space.
 - Wrong side.
 
+<img width="1042" height="862" alt="image" src="https://github.com/user-attachments/assets/996e7d10-9c17-45c1-84c6-086cdc84ea1b" />
+
+
 ### `knee_centre_L`
 
 Same steps, left side.
+
+<img width="1050" height="862" alt="image" src="https://github.com/user-attachments/assets/8d72d01a-224c-43b8-ba78-164e803e1898" />
+
 
 ### `ankle_centre_R`
 
@@ -265,13 +277,15 @@ cross-sectional body of the talus.
   front or back of the talus body.
 - Wrong side.
 
-<img width="1002" height="862" alt="image" src="https://github.com/user-attachments/assets/adc60c48-f548-40f8-986b-86c001b49701" />
+<img width="1052" height="862" alt="image" src="https://github.com/user-attachments/assets/4f6caa7c-5cc4-45e6-aba2-223a491b97f4" />
+
 
 ### `ankle_centre_L`
 
 Same steps, left side.
 
-<img width="1024" height="859" alt="image" src="https://github.com/user-attachments/assets/2d84f4c3-31d5-4548-84cf-09bc04fe2b1a" />
+<img width="1030" height="862" alt="image" src="https://github.com/user-attachments/assets/359d887f-793f-4e2f-af3a-b79583f21df7" />
+
 
 ### `condyle_medial_R`
 
@@ -296,6 +310,9 @@ boundary of the right thigh bone.
 - Floating above the joint line — visible in coronal as a point not
   touching the condyle surface.
 
+<img width="1037" height="862" alt="image" src="https://github.com/user-attachments/assets/8c5786ff-f37d-450f-9d97-3a3cc37d8e2e" />
+
+
 **Anchor note:** this landmark is defined as "the intersection of two
 surface directions". If it repeats badly, the fix is to click the
 medial-most and lateral-most points on the condyle's joint-line edge
@@ -307,7 +324,8 @@ surface click into a midpoint anchor.
 Same steps as `condyle_medial_R`, on the lateral (outer) side. Faces
 away from the other leg.
 
-<img width="1000" height="862" alt="image" src="https://github.com/user-attachments/assets/1ca70fb9-c6e0-426d-a955-b0d936344e1b" />
+<img width="1032" height="862" alt="image" src="https://github.com/user-attachments/assets/2186a7f8-bd16-46f3-8eb2-287980fa848e" />
+
 
 ### `plateau_medial_R`
 
@@ -327,6 +345,9 @@ the upper right shin bone.
 **Common mistakes:**
 - Placed on the lateral plateau by mistake.
 - Floating in the joint gap above the plateau.
+
+<img width="1046" height="862" alt="image" src="https://github.com/user-attachments/assets/af1c80bd-a0c1-4440-adff-e81eb4d28f35" />
+
 
 ### `plateau_lateral_R`
 
@@ -350,7 +371,9 @@ edge of the upper right shin bone.
 - Sunk too deep into the bone centre rather than on the outer
   boundary.
 
-<img width="1022" height="862" alt="image" src="https://github.com/user-attachments/assets/d0b4f150-9075-4991-bfb2-f9d0d36eccc7" />
+<img width="1032" height="862" alt="image" src="https://github.com/user-attachments/assets/270db2a3-2e6a-4717-82e6-dbb7a803b8fd" />
+
+
 
 ### Left-side surface landmarks (`condyle_*_L`, `plateau_*_L`)
 
