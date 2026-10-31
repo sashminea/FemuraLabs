@@ -26,8 +26,10 @@ def _make_synthetic_combined(path: Path) -> Path:
     arr[2:6, 14:18, 2:6] = 2    # femur_L
     arr[2:6, 2:6, 14:18] = 3    # tibia_R
     arr[2:6, 14:18, 14:18] = 4  # tibia_L
-    arr[14:18, 2:6, 2:6] = 5    # fibula_R
-    arr[14:18, 14:18, 2:6] = 6  # fibula_L
+    arr[14:18, 2:6, 2:6] = 5     # fibula_R
+    arr[14:18, 14:18, 2:6] = 6   # fibula_L
+    arr[14:18, 2:6, 14:18] = 7   # talus_R
+    arr[14:18, 14:18, 14:18] = 8 # talus_L
     image = sitk.GetImageFromArray(arr)
     image.SetSpacing((10.0, 10.0, 10.0))
     image.SetOrigin((0.0, 0.0, 0.0))
@@ -53,6 +55,7 @@ def test_pipeline_on_synthetic_volume(tmp_path):
     assert summary["spacing_mm"] == [10.0, 10.0, 10.0]
     assert set(summary["bones"].keys()) == {
         "femur_R", "femur_L", "tibia_R", "tibia_L", "fibula_R", "fibula_L",
+        "talus_R", "talus_L",
     }
     for name, b in summary["bones"].items():
         assert b["voxels"] == 64, f"{name}: {b['voxels']}"

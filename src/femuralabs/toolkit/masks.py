@@ -15,6 +15,8 @@ LABEL_NAMES = {
     4: "tibia_L",
     5: "fibula_R",
     6: "fibula_L",
+    7: "talus_R",
+    8: "talus_L",
 }
 
 
