@@ -27,7 +27,7 @@
 
     Input volume (NRRD/NIfTI)
       -> load_volume (SimpleITK), write NIfTI          [io_volume.py]
-      -> extract femur/tibia masks                     [masks.py]
+      -> extract femur/tibia/fibula/talus masks                     [masks.py]
       -> mesh per bone (marching cubes, mm)            [mesh.py]
       -> mesh verification (watertight, volume)        [mesh.py]      
       -> landmarks (hip, knee, ankle)                  [landmarks.py]

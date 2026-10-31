@@ -26,7 +26,7 @@ Surface-click landmarks placed by eye sit at 7–9 mm.
 | femoral_head_L | Same, left | same |
 | knee_centre_R | Axial at joint line: midpoint between centres of the medial and lateral condyle blobs | Paley; verify before citing |
 | knee_centre_L | Same, left | same |
-| ankle_centre_R | Coronal at talar dome: midpoint between the medial and lateral malleoli, projected to top of talus | standard mechanical-axis definition |
+| ankle_centre_R | Coronal at talar dome: midpoint between the medial and lateral malleoli, projected to top of talus | standard mechanical-axis definition; talus mask added in D032 |
 | ankle_centre_L | Same, left | same |
 | condyle_medial_R | Coronal at joint line: most distal-medial point of the medial femoral condyle | needed for mLDFA |
 | condyle_lateral_R | Coronal at joint line: most distal-lateral point of the lateral femoral condyle | same |

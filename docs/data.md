@@ -43,6 +43,18 @@ ITK-to-RAS direction matrix diag(-1, -1, 1). Slicer shows this in RAS;
 SimpleITK shows the same file in LPS, so x and y are negated between the
 two viewers.
 
+## Handling split-volume subjects (e.g., case02)
+
+Not every subject ships as a single full-limb volume. Some (like subject 045Y.F in `010.zip`) are split into two distinct CT volumes:
+- `...CT.266` (Pelvis-Thighs region, upper half, ~997 slices)
+- `...CT.269` (Shanks-Feet region, lower half, ~763 slices)
+
+**The Trap:** It is tempting to export the segmentations from each half and stack them in Python. This fails because the two volumes are cropped independently; the Z-origins may not align perfectly, and the slice spacings can differ slightly, leading to truncated masks (e.g., a tibia that is only 95 mL instead of 150 mL).
+
+**The Solution:** The authors provide an MRML scene file (`SMIR.Lower_limb.045Y.F.CT.mrml`) in the parent directory. Loading this scene in 3D Slicer automatically loads the original, unified full-limb CT volume and places both the pelvis and shank segmentations on the correct grid. From there, the standard export procedure (Segment Geometry → Export to files) works exactly as it does for case01 and case03.
+
+**Fallback:** If the MRML file is missing or fails to load, the manual `stack_segmentation.py` script exists, but it is a last resort. Always prefer the MRML scene.
+
 ## Segment labels
 
 Both source segmentations carry a **Threshold-200-MAX** segment at label 1

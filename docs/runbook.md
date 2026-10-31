@@ -966,3 +966,14 @@ weaker than the femoral head fit, which matched the hand repeat.
 and `..._left_agrees_with_hand_placement` pin the 6 mm threshold and the
 medial-vs-lateral ordering. Run `pytest tests/test_landmarks.py -v` for
 the verification; the command above is for inspection.
+
+## Handling split-volume subjects (MRML workflow)
+
+If a subject's folder contains two CT volumes (e.g., `CT.266` and `CT.269`):
+
+1. **Do not** export the halves individually.
+2. Open 3D Slicer. `File → Open Scene` and select the `.mrml` file in the root of the subject folder (e.g., `SMIR.Lower_limb.045Y.F.CT.mrml`).
+3. Verify that the full-limb volume (512×512×~1600+) and both segmentations load.
+4. Follow the standard export procedure from "Combining the two reference segmentations" (Slicer segment geometry → NIfTI → `merge_segmentation.py`).
+
+If the MRML file is missing, the subject is considered unusable. Do not attempt to manually stack the halves.

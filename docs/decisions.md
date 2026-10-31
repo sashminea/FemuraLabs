@@ -10,6 +10,18 @@ New entries go at the top.
 
 ---
 
+## D036: Split-volume subjects are resolved via the MRML scene, not manual stacking
+
+**Decision:** When a subject's ZIP contains separate `Pelvis-Thighs` and `Shanks-Feet` CT volumes (as seen in `010.zip` / subject 045Y.F), the pipeline does not attempt to resample and stack them in Python. Instead, the MRML scene file provided by the dataset authors is opened in Slicer, which loads the unified full-limb volume and aligns both segmentations automatically.
+
+**Alternative rejected:** Exporting the two halves separately and concatenating the arrays using `stack_segmentation.py`. 
+
+**Reason:** Manual stacking is brittle. The shanks crop volume is taller (812 slices) than the shanks CT volume (763 slices). When Slicer forces the crop onto the smaller grid, it truncates the top of the tibia. In our test, this produced a tibia mask of only 95 mL (vs. the normal 150–200 mL). The dataset authors explicitly state the MRML file is the intended entry point for Slicer. Using it eliminates the need for coordinate math and avoids truncated masks.
+
+**Consequence:** `stack_segmentation.py` remains in `scripts/` but is marked as a fallback for corrupted MRML files. The primary `merge_segmentation.py` script is used for standard (unified) subjects. If a future subject has split volumes and a missing MRML file, that subject is dropped rather than manually stitched.
+
+---
+
 ## D035: HKA deviation and MAD sign convention — varus positive, side-detected
 
 **Decision:** `hka_deviation` and `mad` return **positive for varus**

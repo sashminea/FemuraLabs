@@ -6,75 +6,38 @@ placement rules for the ten landmarks, the measured hand repeat
 distances, and the algorithm that finds the femoral head centre without
 a human.
 
-Read the ten traps first. Every one of them is a silent error — the
+Read the pitfalls first. Every one of them is a silent error — the
 pipeline produces a mirrored mesh, a wildly wrong angle, or a
 physiologically impossible radius with no error message. Catching them
 before they compound is the difference between a defensible validation
 report and one that gets torn apart in review.
 
-## The ten traps
+## Pitfalls in landmark placement and coordinate handling
 
-1. **Slicer's default axial view is radiological.** Screen-right is the
-   patient's **left**. When you place a landmark labeled `_R`, it must
-   be on the side that appears on the **left of the screen** in Slicer's
-   axial view. If you label screen-right as `_R`, every left/right
-   pair is swapped and the pipeline gives mirrored results. See
-   "The left/right confusion" below for how this was discovered.
 
-2. **Slicer saves `.mrk.json` in LPS, not RAS.** The file declares
-   `"coordinateSystem": "LPS"`. Do not negate x and y when reading a
-   Slicer `.mrk.json` unless the file explicitly says `"RAS"`. The
-   loader `landmark_io.load_landmarks` handles both cases by reading
-   the field.
+1. **Slicer's default axial view is radiological.** Screen-right is the patient's **left**. When you place a landmark labeled `_R`, it must lie on the side that appears on the **left of the screen** in Slicer's axial view. If you label screen-right as `_R`, every left/right pair is swapped and the pipeline returns mirrored results. See "The left/right confusion" for how this was discovered.
 
-3. **The pipeline uses LPS millimetres.** SimpleITK's world frame.
-   Slicer displays RAS, so any coordinate you read from Slicer's status
-   bar must be mentally negated in x and y before comparing with the
-   pipeline.
+2. **Slicer saves `.mrk.json` in LPS, not RAS.** The file declares `"coordinateSystem": "LPS"`. Do not negate x and y when reading a Slicer `.mrk.json` unless the file explicitly says `"RAS"`. The loader `landmark_io.load_landmarks` handles both cases by reading the field.
 
-4. **Surface clicks (single point on a smooth curve) have 7–9 mm
-   repeat distance.** Anchor-based clicks (midpoint of two clear
-   points, or intersection of two clear edges) have 2–3 mm. Every
-   definition below that is anchor-based is anchor-based for that
-   reason. When the guide says "midpoint", click the two anchors first
-   and compute the midpoint — do not eyeball it.
+3. **The pipeline uses LPS millimetres** (SimpleITK's world frame). Slicer displays RAS, so any coordinate read from Slicer's status bar must be mentally negated in x and y before comparing it with the pipeline.
 
-5. **The femoral head is the medial-most spherical feature of the
-   proximal femur.** A sphere fit to the whole proximal end also
-   captures the greater trochanter, which is not spherical and pulls
-   the centre laterally. Constrain by both z (superior) and x (medial).
-   See "Femoral head centre" below.
+4. **Surface clicks have a 7–9 mm repeat distance; anchor-based clicks have 2–3 mm.** A surface click is a single point on a smooth curve. An anchor-based click is the midpoint of two clear points or the intersection of two clear edges. Every landmark definition below that is anchor-based is anchor-based for this reason. When the guide says "midpoint", click the two anchors first and compute the midpoint — do not eyeball it.
 
-6. **The bottom of the tibia mask is not the ankle joint.** The very
-   bottom of the shinbone is the pointed tip of the medial malleolus
-   (the inner ankle bone). The actual joint surface is the plafond,
-   a flat band about 14 mm higher. A slab at the very bottom samples
-   the tip and comes out 14 mm too low, 15 mm too far forward, and
-   10 mm too far inward — a 22–26 mm error on case01 with no warning.
-   Find the plafond as the widest cross-section in the bottom 30 mm
-   of the tibia, not as the bottom-most slab.
+5. **The femoral head is the medial-most spherical feature of the proximal femur.** A sphere fit to the whole proximal end also captures the greater trochanter, which is not spherical and pulls the centre laterally. Constrain the fit by both z (superior) and x (medial). See "Femoral head centre".
 
-7. **The fit radius is the diagnostic.** An adult femoral head is
-   17–25 mm radius. A fit that returns 30+ mm is not the head. Assert
-   the range in the test; do not compare against a hand-placed point
-   until the radius is plausible.
+6. **The bottom of the tibia mask is not the ankle joint.** The very bottom of the shinbone is the pointed tip of the medial malleolus (the inner ankle bone). The actual joint surface is the plafond, a flat band about 14 mm higher. A slab at the very bottom samples the tip and comes out 14 mm too low, 15 mm too far forward, and 10 mm too far inward — a 22–26 mm error on case01 with no warning. Find the plafond as the widest cross-section in the bottom 30 mm of the tibia, not as the bottom-most slab.
 
-8. **"Automatic error < hand repeat distance" is success.** The hand
-   reference is not perfect either. If the automatic method agrees with
-   the hand point to within the hand-placement repeat distance for the
-   same point, the method is at the level of a second human placer.
-   That is the strongest possible outcome for a single-subject
-   reference, and it is what D08 achieved.
+7. **The fit radius is the diagnostic.** An adult femoral head has a radius of 17–25 mm. A fit that returns 30+ mm is not the head. Assert the range in the test; do not compare against a hand-placed point until the radius is plausible.
 
-9. **`data/ref/` is gitignored.** Landmark files contain patient-specific
-   coordinates and stay on disk. Only the placement rules, repeat
-   distances, and algorithm code are committed.
+8. **"Automatic error < hand repeat distance" is success.** The hand reference is not perfect either. If the automatic method agrees with the hand point to within the hand-placement repeat distance for the same point, the method is at the level of a second human placer. That is the strongest possible outcome for a single-subject reference, and it is what D08 achieved.
 
-10. **The pipeline does not need every landmark.** HKA and MAD use only
-   the six centres (hip, knee, ankle per side). Joint-line angles
-   (mLDFA, MPTA) also need the four condyle/plateau points, but those
-   four are surface clicks with higher noise and are not part of the
-   validated pipeline.
+9. **`data/ref/` is gitignored.** Landmark files contain patient-specific coordinates and stay on disk. Only the placement rules, repeat distances, and algorithm code are committed.
+
+10. **The pipeline does not need every landmark.** HKA and MAD use only the six centres (hip, knee, ankle per side). Joint-line angles (mLDFA, MPTA) also need the four condyle/plateau points, but those four are surface clicks with higher noise and are not part of the validated pipeline.
+
+11. **The talus is a visual reference, not a landmark.** As of case03, the merged segmentation includes labels 7 and 8 (`Talus_R`, `Talus_L`). This was added because `ankle_centre` is defined as the midpoint of the malleoli projected to the **top of the talus**. The hand-placer should use the talus mask to visually confirm the joint line, but the talus itself is not a hand-placed landmark. The D09 rule (`ankle_centre`) still uses the tibia and fibula; the talus is only for human verification.
+
+---
 
 ## The left/right confusion
 
