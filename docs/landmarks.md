@@ -312,6 +312,7 @@ the upper right shin bone.
 - Placed on the lateral plateau by mistake.
 - Floating in the joint gap above the plateau.
 
+<img width="1032" height="862" alt="image" src="https://github.com/user-attachments/assets/270db2a3-2e6a-4717-82e6-dbb7a803b8fd" />
 
 ### `plateau_lateral_R`
 
@@ -335,7 +336,7 @@ edge of the upper right shin bone.
 - Sunk too deep into the bone centre rather than on the outer
   boundary.
 
-<img width="1032" height="862" alt="image" src="https://github.com/user-attachments/assets/270db2a3-2e6a-4717-82e6-dbb7a803b8fd" />
+<img width="1024" height="847" alt="image" src="https://github.com/user-attachments/assets/6db79dcc-23ba-4148-ab03-f3b3098fd503" />
 
 
 
