@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: toolkit-hello
+    image: femuralabs-tool
     command: python -m femuralabs.toolkit.service.serve
     ports:
       - "8000:8000"
