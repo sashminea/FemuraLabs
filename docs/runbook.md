@@ -117,26 +117,32 @@ line `$env:PYTHONPATH = "src"` before the `python` call, and replace
 
 ## Building the tool container
 
-Builds the `toolkit-hello` image. The image installs numpy only and runs
-`scripts/hello_pipeline.py` on start, so it is the deliverable that
-executes the project without depending on the host Python.
+Builds the `femuralabs-tool` image. The image installs the geometry dependencies (SimpleITK, scikit-image, scipy) and runs the full pipeline on a synthetic 8-bone volume.
 
-    docker build -t toolkit-hello .
+    docker build -t femuralabs-tool .
 
-`-t` names the image (tag defaults to `latest`). The final `.` is the
-build context — the folder the build is allowed to copy from. It is the
-project root, not `scripts/`.
+**What to expect:** The build takes about 2 minutes (mostly downloading and installing scipy). 
 
-Expected: the build ends with a line naming the image, for example
-`=> naming to docker.io/library/toolkit-hello:latest`. The first build
-pulls the base image and installs numpy, so it takes a minute or two.
-Rebuilds reuse the cached dependency layer and finish in a few seconds.
+## Running the tool container
 
-If Docker reports `Cannot connect to the Docker daemon`, Docker Desktop is
-not running. If `COPY` fails with `file not found`, the missing file is
-either untracked or excluded by `.dockerignore`; check `git status` first
-and the ignore file second.
+    docker run --rm femuralabs-tool
 
+Expected output:
+
+    Generated synthetic case at /tmp/synthetic_case/combined_seg.nii
+    Running pipeline...
+    Loading volume: /tmp/synthetic_case/combined_seg.nii
+      Extracting and meshing: femur_R...
+      Extracting and meshing: femur_L...
+      Extracting and meshing: tibia_R...
+      Extracting and meshing: tibia_L...
+      Extracting and meshing: fibula_R...
+      Extracting and meshing: fibula_L...
+      Extracting and meshing: talus_R...
+      Extracting and meshing: talus_L...
+    Wrote /tmp/output/summary.json
+
+The container runs as the non-root `student` user and generates all meshes in `/tmp`. No real CT data is required, and no data is written to the host.
 
 ## Running the tool container
 

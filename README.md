@@ -76,11 +76,14 @@ pip install -r requirements.txt
 pytest -q                        # runs the 53 tests
 ```
 
-The repository also contains a Dockerfile and a Docker Compose file, but they are optional and you can safely ignore them for now. At the moment the container only packages the small utilities the toolkit started with, a geometry command line tool and a tiny HTTP service, and it does not run the alignment pipeline, which needs SimpleITK and the CT data. They are kept in the repository for future use, for when the full pipeline gets containerised. If you want to try the container anyway, it builds and runs with:
+The repository also contains a Dockerfile that packages the full geometry pipeline. You can run the pipeline on a synthetic test volume without installing SimpleITK, scikit-image, or any other dependencies on your host machine:
 
 ```bash
-docker build -t toolkit-hello . && docker run --rm toolkit-hello
+docker build -t femuralabs-tool .
+docker run --rm femuralabs-tool
 ```
+
+This will generate a synthetic 8-bone volume, run the full pipeline (masks → meshes → JSON), and output the results inside the container.
 
 Running the real pipeline needs data, annotation work and a few scripts, and that is what the next section walks through.
 
