@@ -1,7 +1,7 @@
 """Print the shape and spacing of a synthetic volume."""
 
 import numpy as np
-from femuralabs.toolkit.volume_info import make_volume
+from femuralabs.toolkit.imaging.volume_info import make_volume
 
 
 if __name__ == "__main__":

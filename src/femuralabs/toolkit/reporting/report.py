@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from femuralabs.toolkit.io import save_json
+from femuralabs.toolkit.fileio.json_utils import save_json
 
 def write_info(info: dict, out_dir: Path | str) -> Path:
 	"""Write `info` to `out_dir/info.json` and return the path it wrote.

@@ -4,8 +4,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from femuralabs.toolkit.io_volume import load_volume
-from femuralabs.toolkit.masks import LABEL_NAMES, extract_masks
+from femuralabs.toolkit.fileio.volume import load_volume
+from femuralabs.toolkit.imaging.masks import LABEL_NAMES, extract_masks
 
 
 COMBINED = Path("data/raw/case01/combined_seg.nii")

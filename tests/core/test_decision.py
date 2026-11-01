@@ -1,5 +1,5 @@
 """Protect the three branches of the verdict rule."""
-from femuralabs.toolkit.decision import verdict
+from femuralabs.toolkit.reporting.decision import verdict
 
 
 def test_verdict_three_outcomes():

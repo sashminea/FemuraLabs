@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from femuralabs.toolkit.io import save_json
+from femuralabs.toolkit.fileio.json_utils import save_json
 
 import os
 import platform

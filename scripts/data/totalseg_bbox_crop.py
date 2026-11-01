@@ -8,8 +8,8 @@ from pathlib import Path
 import numpy as np
 import SimpleITK as sitk
 
-from femuralabs.toolkit.io_volume import load_volume
-from femuralabs.toolkit.masks import extract_masks
+from femuralabs.toolkit.fileio.volume import load_volume
+from femuralabs.toolkit.imaging.masks import extract_masks
 
 
 def resample_image(image, new_spacing, interpolator=sitk.sitkLinear):

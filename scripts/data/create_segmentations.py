@@ -6,9 +6,9 @@ from pathlib import Path
 
 import numpy as np
 
-from femuralabs.toolkit.io_volume import load_volume
-from femuralabs.toolkit.masks import extract_masks
-from femuralabs.toolkit.metrics import dice_score, hd95
+from femuralabs.toolkit.fileio.volume import load_volume
+from femuralabs.toolkit.imaging.masks import extract_masks
+from femuralabs.toolkit.geometry.metrics import dice_score, hd95
 
 def main():
     p = argparse.ArgumentParser()

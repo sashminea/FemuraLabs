@@ -4,13 +4,13 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from femuralabs.toolkit.io_volume import load_volume
-from femuralabs.toolkit.landmark_io import load_landmarks
-from femuralabs.toolkit.landmarks import fit_sphere, femoral_head_centre
-from femuralabs.toolkit.masks import extract_masks
-from femuralabs.toolkit.mesh import mask_to_mesh
-from femuralabs.toolkit.landmarks import fit_sphere, femoral_head_centre, ankle_centre
-from femuralabs.toolkit.landmarks import fit_sphere, femoral_head_centre, ankle_centre, knee_centre
+from femuralabs.toolkit.fileio.volume import load_volume
+from femuralabs.toolkit.fileio.landmark import load_landmarks
+from femuralabs.toolkit.geometry.landmarks import fit_sphere, femoral_head_centre
+from femuralabs.toolkit.imaging.masks import extract_masks
+from femuralabs.toolkit.imaging.mesh import mask_to_mesh
+from femuralabs.toolkit.geometry.landmarks import fit_sphere, femoral_head_centre, ankle_centre
+from femuralabs.toolkit.geometry.landmarks import fit_sphere, femoral_head_centre, ankle_centre, knee_centre
 
 COMBINED = Path("data/raw/case01/combined_seg.nii")
 LMK = Path("data/ref/landmarks_case01.mrk.json")

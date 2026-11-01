@@ -2,8 +2,8 @@
 
 import json
 
-from femuralabs.toolkit.report import write_info
-from femuralabs.toolkit.volume_info import describe, make_volume
+from femuralabs.toolkit.reporting.report import write_info
+from femuralabs.toolkit.imaging.volume_info import describe, make_volume
 
 def test_write_info_creates_folder_and_file(tmp_path):
 	"""Two levels deep, neither exists yet: proves parents=True and exist_ok=True."""

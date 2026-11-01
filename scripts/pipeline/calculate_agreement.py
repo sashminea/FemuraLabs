@@ -2,7 +2,7 @@
 """Calculate agreement statistics for angles across all cases."""
 import json
 from pathlib import Path
-from femuralabs.toolkit.stats import confidence_interval, bland_altman
+from femuralabs.toolkit.geometry.stats import confidence_interval, bland_altman
 
 CASES = ["case01", "case02", "case03"]
 

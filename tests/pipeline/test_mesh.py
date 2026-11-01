@@ -4,9 +4,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from femuralabs.toolkit.io_volume import load_volume
-from femuralabs.toolkit.masks import extract_masks
-from femuralabs.toolkit.mesh import mask_to_mesh, read_stl_vertices, is_watertight, save_stl, signed_volume, edge_incidence
+from femuralabs.toolkit.fileio.volume import load_volume
+from femuralabs.toolkit.imaging.masks import extract_masks
+from femuralabs.toolkit.imaging.mesh import mask_to_mesh, read_stl_vertices, is_watertight, save_stl, signed_volume, edge_incidence
 
 COMBINED = Path("data/raw/case01/combined_seg.nii")
 

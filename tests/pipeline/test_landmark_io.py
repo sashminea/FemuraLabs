@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from femuralabs.toolkit.landmark_io import load_landmarks, repeat_distances
+from femuralabs.toolkit.fileio.landmark import load_landmarks, repeat_distances
 
 
 def test_ras_to_lps_conversion(tmp_path):

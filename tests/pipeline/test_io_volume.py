@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from femuralabs.toolkit.io_volume import Volume, load_volume, save_nifti
+from femuralabs.toolkit.fileio.volume import Volume, load_volume, save_nifti
 
 
 def test_identity_round_trip(tmp_path):

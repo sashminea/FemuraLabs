@@ -8,12 +8,12 @@ from pathlib import Path
 
 import numpy as np
 
-from femuralabs.toolkit.io_volume import load_volume
-from femuralabs.toolkit.masks import LABEL_NAMES
-from femuralabs.toolkit.mesh import mask_to_mesh, save_stl
-from femuralabs.toolkit.landmarks import femoral_head_centre, knee_centre, ankle_centre
-from femuralabs.toolkit.landmark_io import load_landmarks
-from femuralabs.toolkit.alignment import hka_deviation, mad, mldfa, mpta
+from femuralabs.toolkit.fileio.volume import load_volume
+from femuralabs.toolkit.imaging.masks import LABEL_NAMES
+from femuralabs.toolkit.imaging.mesh import mask_to_mesh, save_stl
+from femuralabs.toolkit.geometry.landmarks import femoral_head_centre, knee_centre, ankle_centre
+from femuralabs.toolkit.fileio.landmark import load_landmarks
+from femuralabs.toolkit.geometry.alignment import hka_deviation, mad, mldfa, mpta
 
 
 def run(case_path: Path, out_dir: Path, compare_path: Path | None = None, angles: bool = False) -> dict:

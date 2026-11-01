@@ -1,6 +1,6 @@
 """Tests for agreement statistics."""
 import pytest
-from femuralabs.toolkit.stats import mean_std, confidence_interval, bland_altman
+from femuralabs.toolkit.geometry.stats import mean_std, confidence_interval, bland_altman
 
 
 def test_mean_std():

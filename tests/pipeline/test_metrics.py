@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from femuralabs.toolkit.metrics import dice_score, iou_score, hd95
+from femuralabs.toolkit.geometry.metrics import dice_score, iou_score, hd95
 
 
 def test_dice_and_iou_perfect_overlap():

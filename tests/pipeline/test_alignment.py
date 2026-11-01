@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from femuralabs.toolkit.alignment import (
+from femuralabs.toolkit.geometry.alignment import (
     hka_deviation,
     mad,
     knee_error_to_angle_deg,
@@ -84,14 +84,14 @@ def test_knee_error_to_angle_deg_helper():
 
 def test_project_to_plane():
     """Sprint-doc example: project (3,5,4) onto plane with normal (0,1,0)."""
-    from femuralabs.toolkit.alignment import project_to_plane
+    from femuralabs.toolkit.geometry.alignment import project_to_plane
     v = project_to_plane(np.array([3.0, 5.0, 4.0]), normal=(0.0, 1.0, 0.0))
     assert np.allclose(v, [3.0, 0.0, 4.0])
 
 
 def test_mldfa_synthetic_87_degrees():
     """Synthetic joint line: 87.0 degrees (sprint doc)."""
-    from femuralabs.toolkit.alignment import mldfa
+    from femuralabs.toolkit.geometry.alignment import mldfa
     knee          = np.array([0.0, 0.0, 0.0])
     hip           = np.array([0.0, 0.0, 400.0])
     condyle_medial  = np.array([-30.0, 0.0, -1.57])
@@ -116,7 +116,7 @@ def test_mpta_synthetic_87_degrees():
     Medial plateau is 1.57 mm higher than lateral (normal anatomy).
     Under the acute-angle fix, this returns 87°.
     """
-    from femuralabs.toolkit.alignment import mpta
+    from femuralabs.toolkit.geometry.alignment import mpta
     knee            = np.array([0.0, 0.0, 0.0])
     ankle           = np.array([0.0, 0.0, -400.0])
     plateau_lateral = np.array([0.0, 0.0, 0.0])

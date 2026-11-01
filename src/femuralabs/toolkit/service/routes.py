@@ -5,7 +5,7 @@ import json
 import os
 from pathlib import Path
 
-from femuralabs.toolkit.volume_info import describe, make_volume
+from femuralabs.toolkit.imaging.volume_info import describe, make_volume
 
 def _report_body() -> dict | None:
     """Return the contents of {REPORT_FOLDER}/info.json, or None.

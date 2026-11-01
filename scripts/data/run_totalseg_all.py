@@ -59,7 +59,7 @@ def main():
             
             run_cmd([
                 sys.executable, "-c", 
-                f"from femuralabs.toolkit.io_volume import load_volume, save_nifti; "
+                f"from femuralabs.toolkit.fileio.volume import load_volume, save_nifti; "
                 f"v = load_volume('{nrrds[0]}'); save_nifti(v, '{ct_path}')"
             ])
             

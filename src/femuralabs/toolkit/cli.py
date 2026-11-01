@@ -6,8 +6,8 @@ from pathlib import Path
 
 import numpy as np
 
-from femuralabs.toolkit.volume_info import describe, make_volume
-from femuralabs.toolkit.report import write_info
+from femuralabs.toolkit.imaging.volume_info import describe, make_volume
+from femuralabs.toolkit.reporting.report import write_info
 
 LABELS = {
 

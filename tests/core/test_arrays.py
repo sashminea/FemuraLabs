@@ -1,8 +1,8 @@
 import numpy as np
 
-from femuralabs.toolkit.arrays import zscore_batch
-from femuralabs.toolkit.arrays import window_to_uint8
-from femuralabs.toolkit.arrays import conv2d
+from femuralabs.toolkit.imaging.arrays import zscore_batch
+from femuralabs.toolkit.imaging.arrays import window_to_uint8
+from femuralabs.toolkit.imaging.arrays import conv2d
 
 def test_zscore_removes_brightness_and_scale():
 	v = np.arange(24, dtype=float).reshape(2, 3, 4)
