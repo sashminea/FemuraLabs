@@ -51,6 +51,15 @@ What ultimately matters is whether the angles come out right, so the table below
 
 To give those numbers some scale, the hand-placed HKA values across the three subjects run from mild valgus (about −4°) to clear varus (about +7°), and an 8 mm error in the knee centre on a thigh of typical length moves HKA by roughly one degree. The joint-line angles agree closely with the hand reference, though that comparison is limited by how noisy the hand-placed condyle and plateau points are (see the limitations below). The complete breakdown, including per-subject tables, is in [`reports/validation.md`](reports/validation.md), [`reports/landmark_errors.md`](reports/landmark_errors.md) and [`reports/angles_case.md`](reports/angles_case.md).
 
+### Segmentation Comparison (TotalSegmentator)
+To validate the reference masks themselves, we ran TotalSegmentator (a pre-trained neural network) on the CT volumes and compared its output to the human segmentations. Even on 3mm downsampled data, the agreement is strong:
+
+| Bone | Mean Dice | Mean HD95 (mm) |
+|---|---|---|
+| Femur | 0.73 | 7.7 |
+| Tibia | 0.67 | 5.5 |
+| Fibula | 0.74 | 2.8 |
+
 ## Getting started
 
 You can install the project and run its test suite without downloading any CT data, which is the quickest way to check that everything is set up properly on your machine.
@@ -164,6 +173,8 @@ It is worth being clear about what this project does not claim. It has been eval
 The hand reference is also the weakest link in places. The condyle and plateau points used for the joint-line angles were placed by clicking on a surface, and those clicks repeat only to within 7 to 9 mm, against 2 to 3 mm for landmarks defined as the midpoint of two clear anatomical features. That noise limits how finely mLDFA and MPTA can be validated, and left-side joint-line landmarks were not placed for the second and third subjects at all. Near-neutral legs are also where small landmark errors matter most: on the second subject's right leg the automatic HKA is +3.5° while the hand value is −1.4°, which flips the label from varus to valgus.
 
 On the method side, the ankle rule uses the tibial plafond as a stand-in for the talar dome. The talus is already segmented and merged into `combined_seg.nii`, but the rule does not use it yet, and the documentation names the condition under which that should change. The most natural ways to strengthen the project are more subjects, an annotation pass with more than one person, and measured repeat distances for every landmark on every subject.
+
+The TotalSegmentator comparison was run on 3mm downsampled CTs using a bounding-box crop, because the full-resolution model requires more than 16 GB of RAM. This introduces a 3mm boundary error; future work on a workstation with more memory should use the native 1.5mm model.
 
 ## Data and licences
 
