@@ -3,25 +3,44 @@
 ## Layout
 
     src/femuralabs/toolkit/     importable package
-      arrays.py                 NumPy helpers (zscore, window, conv2d)
-      summary.py                statistics of a .npy file, and a CLI
-      volume_info.py            make_volume, describe
-      cli.py                    volume geometry CLI
-      io.py                     save_json primitive
-      report.py                 write_info: JSON report writer
-      decision.py               verdict rule for repeated runs
-      training/                 model.py, train_utils.py
+      fileio/
+        json_utils.py           save_json primitive
+        volume.py               load_volume, save_nifti (SimpleITK)
+        landmark.py             load_landmarks (.mrk.json), repeat_distances
+      imaging/
+        arrays.py               NumPy helpers (zscore, window, conv2d)
+        masks.py                extract_masks, BoneMask, LABEL_NAMES
+        mesh.py                 mask_to_mesh, save_stl, signed_volume, edge_incidence
+        volume_info.py          make_volume, describe
+      geometry/
+        landmarks.py            femoral_head_centre, knee_centre, ankle_centre
+        alignment.py            hka_deviation, mad, mldfa, mpta
+        metrics.py              dice_score, hd95 (KDTree implementation)
+        stats.py                confidence_interval, bland_altman
+      reporting/
+        decision.py             verdict rule for repeated runs
+        report.py               write_info (JSON report writer)
+        summary.py              statistics of a .npy file, and a CLI
       service/                  routes.py, api.py, serve.py (HTTP)
+      training/                 model.py, train_utils.py (PyTorch)
+      cli.py                    volume geometry CLI
 
-    scripts/                    one-off scripts, run by hand
-    tests/                      pytest suite
+    scripts/
+      data/                     merge_segmentation.py, totalseg_bbox_crop.py, paste_back.py
+      pipeline/                 pipeline_demo.py, run_all_cases.py, compare_segmentations.py
+      dev/                      draw_flow.py, clean_check.sh, train_small_cnn.py
+
+    tests/
+      core/                     test_cli.py, test_report.py, test_arrays.py, test_decision.py
+      pipeline/                 test_landmarks.py, test_alignment.py, test_mesh.py, etc.
+      service/                  test_routes.py
+      training/                 test_train_utils.py
+
     docs/                       documentation (see AGENTS.md)
     web/                        static page served by the `web` Compose service
 
-    Dockerfile                  tool image (numpy, non-root `student`)
+    Dockerfile                  tool image (numpy, SimpleITK, scikit-image, non-root `student`)
     docker-compose.yml          `api` (built) + `web` (public image)
-    requirements.txt            dev environment (torch, numpy, matplotlib, pytest)
-    requirements-tool.txt       tool image only (numpy, pinned)
 
 ## Data pipeline (planned)
 

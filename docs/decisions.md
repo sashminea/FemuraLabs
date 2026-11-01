@@ -10,6 +10,18 @@ New entries go at the top.
 
 ---
 
+## D042: Toolkit modules are grouped by domain (fileio, imaging, geometry, reporting)
+
+**Decision:** The flat `toolkit/` folder was refactored into four domain subpackages: `fileio`, `imaging`, `geometry`, and `reporting`. `cli.py`, `service/`, and `training/` stayed at the root.
+
+**Alternative rejected:** Keeping everything flat in `toolkit/`, or grouping by file type (all io here, all math there).
+
+**Reason:** The original flat structure worked when there were 5 modules. At 14 modules, it became a dumping ground. Grouping by domain makes the import paths self-documenting (`geometry.alignment` vs `alignment`). The refactor follows the exact rule from D010: "a subpackage appears when two or more files share one purpose and are expected to grow."
+
+**Consequence:** Every import across `src/`, `tests/`, and `scripts/` had to be rewritten. All 62 tests pass, but if a new module is added, it must be placed in the correct domain folder.
+
+---
+
 ## D041: TotalSegmentator output labels are mapped by hardcoded index, not centroid
 
 **Decision:** The `compare_segmentations.py` script maps TS labels using the fixed indices from TotalSegmentator v2.18.0 (`75`/`76` for femurs, `2`/`3` for tibias/fibulas) rather than estimating them by 3D centroid.

@@ -130,27 +130,31 @@ The repository is organised so that the code, the documentation and the generate
 ```text
 FemuraLabs/
 ├── src/femuralabs/toolkit/   # Core Python library
-│   ├── io_volume.py          # Volume loading/saving and geometry dataclass
-│   ├── masks.py              # NIfTI label extraction and voxel volume
-│   ├── mesh.py               # Marching cubes, STL export, edge incidence
-│   ├── landmarks.py          # Automated femoral head, knee, and ankle rules
-│   ├── alignment.py          # HKA, MAD, mLDFA, MPTA math
-│   └── landmark_io.py        # Slicer .mrk.json parsing (RAS/LPS handling)
+│   ├── fileio/               # Volume, landmark, and JSON I/O
+│   ├── imaging/              # Masks, meshes, arrays, and volume geometry
+│   ├── geometry/             # Landmarks, alignment angles, stats, and metrics
+│   ├── reporting/            # Decision logic, JSON writer, summary generator
+│   ├── service/              # HTTP API (routes, api, serve)
+│   ├── training/             # PyTorch model and training utilities
+│   └── cli.py                # Command-line interface for volume geometry
 ├── scripts/                  # Executable pipeline entry points
-│   ├── run_all_cases.py      # Runs the pipeline on all subjects
-│   ├── pipeline_demo.py      # End-to-end processing for a single case
-│   ├── merge_segmentation.py # Merges Slicer segmentations into combined_seg.nii
-│   └── make_report_tables.py # Parses JSON output into Markdown reports
-├── tests/                    # Pytest suite (53 tests)
+│   ├── data/                 # Merge segmentations, crop for TotalSegmentator
+│   ├── pipeline/             # Run cases, compare, and generate reports
+│   └── dev/                  # Draw flow diagrams, run training, clean checks
+├── tests/                    # Pytest suite (62 tests)
+│   ├── core/                 # Tests for general utilities and the CLI
+│   ├── pipeline/             # Tests for geometry, metrics, and alignment
+│   ├── service/              # Tests for the HTTP API
+│   └── training/             # Tests for the PyTorch utilities
 ├── docs/                     # Engineering and scientific documentation
 │   ├── runbook.md            # Exact commands and diagnostic scripts
 │   ├── landmarks.md          # Placement guides and algorithm rules
 │   ├── data.md               # Dataset, licensing, and merge procedures
-│   └── decisions.md          # Architectural design choices (D001-D039)
+│   └── decisions.md          # Architectural design choices (D001-D042)
 ├── reports/                  # Generated validation tables and figures
 │   ├── validation.md         # Main results report
 │   └── angles_case.md        # Auto-generated angle comparisons
-├── Dockerfile                # CPU-only tool container
+├── Dockerfile                # CPU-only tool container (synthetic demo)
 ├── requirements.txt          # Dev environment (torch, numpy, etc.)
 └── CITATION.cff              # Dataset, paper, and tool references
 ```
