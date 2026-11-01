@@ -10,6 +10,30 @@ New entries go at the top.
 
 ---
 
+## D041: TotalSegmentator output labels are mapped by hardcoded index, not centroid
+
+**Decision:** The `compare_segmentations.py` script maps TS labels using the fixed indices from TotalSegmentator v2.18.0 (`75`/`76` for femurs, `2`/`3` for tibias/fibulas) rather than estimating them by 3D centroid.
+
+**Alternative rejected:** Using the physical centroid of the predicted masks to guess which bone is which.
+
+**Reason:** The `total` model outputs 117 classes (organs, vessels, bones). A centroid heuristic blindly assigns *every* label to "femur" if it's on the left or right side, resulting in the last class overwriting the real femur. Hardcoding the known indices prevents this.
+
+**Consequence:** If TotalSegmentator updates their model and changes the label IDs, the comparison script will break (Dice = 0.0). The version is pinned in `requirements.txt`.
+
+--
+
+## D040: TotalSegmentator is run on a cropped ROI to survive OOM limits
+
+**Decision:** We resample the CT to 3mm, crop to the reference bone bounding box, and run TS on the crop. The script explicitly handles the Linux OOM kill by waiting for the background process to finish writing the file.
+
+**Alternative rejected:** Running on the full 512×512×1637 volume. Or upgrading hardware.
+
+**Reason:** The development machine has 7.7 GB of usable RAM. The model's final resampling step requires ~200 GB. To avoid buying a new laptop, we reduce the input volume by 90% using a bounding box crop.
+
+**Consequence:** The output masks carry a ~3mm discretisation error. For the Dice/HD95 validation report, this is acceptable (HD95 errors are >2.4mm regardless). The `totalseg_bbox_crop.py` script must catch the SIGKILL and poll for the file to appear.
+
+---
+
 ## D039: Reports are generated from pipeline JSON, not typed by hand
 
 **Decision:** `reports/landmark_errors.md` and `reports/angles_case.md`

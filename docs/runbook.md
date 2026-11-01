@@ -1057,3 +1057,41 @@ Once the JSONs for all three cases exist under `output/<case>/summary.json`, the
 
 This parses the JSON files (so the tables cannot drift from the actual data) and writes `reports/landmark_errors.md` and `reports/angles_case.md`. The angle summary includes bias and mean absolute difference across the available subjects.
 
+## Running TotalSegmentator on low-RAM hardware
+
+**Hardware constraint:** TotalSegmentator v2.18.0 requires **8 GB of CPU RAM** for the `fast` model and **16 GB** for the standard model. On a 16 GB WSL2 machine with 7.7 GB of usable RAM (like the development laptop), running the full 512×512×1637 CT volume will result in a **Linux OOM Killer (SIGKILL: 9)**.
+
+**What goes wrong:**
+1. The model successfully runs the prediction (using a sliding window).
+2. At the very end, it tries to resample the logits (117 classes for `total`, 11 for `appendicular_bones`) back to the original grid.
+3. This allocation is roughly 200 GB. The OS kills the parent process instantly.
+
+**What we tried and failed:**
+- `--fast` and `--fastest`: Still OOMs because the final resampling tensor is too large.
+- `--force_split` and `--body_seg`: Splits the prediction, but the final resampling still allocates the full 200 GB tensor.
+- `-nr_thr_saving 1`: Prevents threaded saving, but doesn't help the core memory spike.
+
+**The working solution (Bounding Box Crop + OOM Wait Loop):**
+We cannot avoid the OOM killer, so we survive it.
+1. **Resample the CT to 3mm** using `SimpleITK`.
+2. **Crop to the bone bounding box** using the reference `combined_seg.nii` mask (plus a 20-voxel margin).
+3. **Run TotalSegmentator** on this tiny cropped volume.
+4. **Wait for the crash**: The parent process is killed, but the `TotalSegmentator` child process detaches and keeps running in the background.
+5. **Poll the filesystem**: Wait until `totalseg_cropped.nii` appears on disk.
+6. **Paste back**: Upsample the cropped mask back to the full 512×512×1637 grid using `NearestNeighbor`.
+
+**Commands:**
+The wrapper script handles all of this automatically:
+    PYTHONPATH=src python scripts/data/run_totalseg_all.py --case case02
+
+If running manually:
+    PYTHONPATH=src python scripts/data/totalseg_bbox_crop.py --ct data/raw/case02/case02_ct.nii.gz --ref data/raw/case02/combined_seg.nii --out output/totalseg/case02 --task total
+
+**Limitations:**
+- The 3mm resampling means the mask boundaries have a ~3mm stair-step error compared to the native 0.9mm CT. This is acceptable for Dice/HD95, but if you need 1.5mm accuracy, you must run this on a machine with >32 GB of RAM.
+- This technique relies on having a reference mask to define the bounding box. If you are running TotalSegmentator on a completely new, unsegmented scan, you must write a separate script to find the bounding box using a HU threshold.
+- The OOM wait-loop adds ~5 minutes of idle time to every run.
+
+**Label Mapping Trap (v2.18.0):**
+- The `total` task outputs femurs at label `75` (Left) and `76` (Right).
+- The `appendicular_bones` task outputs Tibias at label `2` and Fibulas at label `3`. **It does not separate Left and Right**. You must split these arrays at the midline (world x=0) to separate the left and right legs.
