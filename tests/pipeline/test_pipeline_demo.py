@@ -39,7 +39,7 @@ def _make_synthetic_combined(path: Path) -> Path:
 def _run(case: Path, out: Path) -> dict:
     env = {**os.environ, "PYTHONPATH": "src"}
     subprocess.run(
-        [sys.executable, "scripts/pipeline_demo.py",
+        [sys.executable, "scripts/pipeline/pipeline_demo.py", # <--- updated path
          "--case", str(case), "--out", str(out)],
         capture_output=True, text=True, check=True, env=env,
     )

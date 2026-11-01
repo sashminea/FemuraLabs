@@ -14,7 +14,7 @@ def main():
     for case in CASES:
         print(f"\n========================================\nRunning {case}...\n========================================")
         cmd = [
-            sys.executable, "scripts/pipeline_demo.py",
+            sys.executable, "scripts/pipeline/pipeline_demo.py", # <--- updated path
             "--case", f"data/raw/{case}/combined_seg.nii",
             "--out", f"output/{case}",
             "--compare", f"data/ref/landmarks_{case}.mrk.json",
