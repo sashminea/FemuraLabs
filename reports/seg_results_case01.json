@@ -1,0 +1,26 @@
+{
+  "femur_R": {
+    "dice": 0.709,
+    "hd95_mm": 6.92
+  },
+  "femur_L": {
+    "dice": 0.674,
+    "hd95_mm": 6.54
+  },
+  "tibia_R": {
+    "dice": 0.67,
+    "hd95_mm": 5.9
+  },
+  "tibia_L": {
+    "dice": 0.632,
+    "hd95_mm": 5.12
+  },
+  "fibula_R": {
+    "dice": 0.739,
+    "hd95_mm": 2.8
+  },
+  "fibula_L": {
+    "dice": 0.724,
+    "hd95_mm": 2.8
+  }
+}

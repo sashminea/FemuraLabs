@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import numpy as np
 from scipy import ndimage
-
+from scipy.spatial import cKDTree
 
 def dice_score(mask_a: np.ndarray, mask_b: np.ndarray) -> float:
     """Dice similarity coefficient (0 to 1). 1 means perfect overlap."""
@@ -22,36 +22,34 @@ def iou_score(mask_a: np.ndarray, mask_b: np.ndarray) -> float:
     return float(intersection / union)
 
 
+from scipy.spatial import cKDTree
+
 def _surface_distances(mask_a: np.ndarray, mask_b: np.ndarray, spacing: tuple[float, float, float]) -> np.ndarray:
     """Distances from the surface of mask_a to the nearest surface voxel of mask_b."""
-    # Extract surface voxels (mask minus its erosion)
     struct = ndimage.generate_binary_structure(3, 1)
-    surface_a = mask_a & ~ndimage.binary_erosion(mask_a, struct)
+    surf_a = mask_a & ~ndimage.binary_erosion(mask_a, struct)
+    surf_b = mask_b & ~ndimage.binary_erosion(mask_b, struct)
     
-    # Distance transform of the inverted mask_b
-    # (This gives the distance from any voxel to the closest mask_b voxel)
-    dt_b = ndimage.distance_transform_edt(~mask_b, sampling=spacing)
+    # Get coordinates of surface voxels and scale by spacing
+    coords_a = np.argwhere(surf_a) * np.array(spacing)
+    coords_b = np.argwhere(surf_b) * np.array(spacing)
     
-    # Read the distances at the surface_a voxels
-    return dt_b[surface_a]
-
+    if len(coords_b) == 0:
+        return np.array([float('inf')])
+        
+    tree = cKDTree(coords_b)
+    dists, _ = tree.query(coords_a)
+    return dists
 
 def hd95(mask_a: np.ndarray, mask_b: np.ndarray, spacing: tuple[float, float, float]) -> float:
-    """95th percentile Hausdorff Distance in mm.
-
-    Computes the surface distances in both directions, pools them,
-    and takes the 95th percentile. This is the standard medical imaging
-    definition (e.g., as implemented in MONAI or medpy).
-    """
+    """95th percentile Hausdorff Distance in mm."""
     if not np.any(mask_a) and not np.any(mask_b):
         return 0.0
     if not np.any(mask_a) or not np.any(mask_b):
         return float("inf")
         
-    # Distances from A surface to B, and B surface to A
     dists_a_to_b = _surface_distances(mask_a, mask_b, spacing)
     dists_b_to_a = _surface_distances(mask_b, mask_a, spacing)
     
-    # Pool the distances and take the 95th percentile
     all_dists = np.concatenate([dists_a_to_b, dists_b_to_a])
     return float(np.percentile(all_dists, 95))

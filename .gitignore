@@ -1,8 +1,10 @@
 .venv/
-data/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
 runs/output/
 *.pt
-output/
+/data/
+/output/
+/data/
+/output/

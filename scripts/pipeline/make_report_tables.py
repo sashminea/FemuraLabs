@@ -82,5 +82,22 @@ def main():
     (REPORT_DIR / "angles_case.md").write_text("\n".join(angle_md) + "\n")
     print(f"Wrote reports/angles_case.md")
 
+    # --- Segmentation Comparison ---
+    seg_md = [
+        "# Segmentation Metrics (TotalSegmentator vs Reference)",
+        "",
+        "| Case | Bone | Dice | HD95 (mm) |",
+        "|---|---|---|---|"
+    ]
+    for case in CASES:
+        path = Path(f"reports/seg_results_{case}.json")
+        if not path.exists(): continue
+        seg_data = json.loads(path.read_text())
+        for bone, metrics in seg_data.items():
+            seg_md.append(f"| {case} | {bone} | {metrics['dice']:.3f} | {metrics['hd95_mm']:.2f} |")
+            
+    (REPORT_DIR / "segmentation_errors.md").write_text("\n".join(seg_md) + "\n")
+    print(f"Wrote reports/segmentation_errors.md")
+
 if __name__ == "__main__":
     main()
