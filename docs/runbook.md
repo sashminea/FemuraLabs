@@ -550,17 +550,14 @@ do not reach the ankle.
    `SMIR.Lower_limb.051Y.F.CT.168_1/CT.168.nrrd`. Confirm in
    `Modules → Volumes → Volume Information` that `Image Dimensions` reads
    512, 512, 1637.
-2. `File → Add Data` and open the `_Reconstruction.seg.nrrd` file.
-3. In `Modules → Segment Editor` (NOT Segmentations), set **Source volume** to the full-limb CT volume.
-4. Click the small icon immediately to the right of the Source volume dropdown (the **"Segment geometry"** dialog). Confirm the dimensions and spacing match the full CT volume. Click **OK**.
-5. In `Modules → Segmentations` (NOT Segment Editor), scroll to the **"Export to files"** section.
-   - **File format**: `NIFTI (.nii)` (NOT `.nii.gz`).
-   - **Destination folder**: any Windows-side folder.
-   - The **File name** is derived from the segmentation name and is not editable. Click **Export**.
-6. Slicer writes two files into the destination folder:
-   - `SMIR.Lower_limb.051Y.F.CT.168-Pelvis-Thighs_Reconstruction.nii`
-     (or `.nii.gz`).
-   - `..._Reconstruction.labels.csv` (colour and name table).
+2. `File → Add Data` and open the `_Reconstruction.seg.nrrd` (or `_Segmentation.seg.nrrd` for shanks) file.
+3. Go to `Modules → Segment Editor`.
+4. **Crucial step:** In the Segment Editor panel, set the **Source volume** to the full-limb CT volume.
+5. Click the small icon next to the Source volume dropdown (the **"Segment geometry"** dialog). Confirm the dimensions and spacing match the full CT volume (e.g., 512 x 512 x 3273). Click **OK**.
+6. In `Modules → Segmentations`, scroll to the **"Export to files"** section.
+   - **File format**: `NIFTI (.nii)`.
+   - **Destination folder**: any folder on the `D:` drive (e.g., `D:\Femuralabs\D07\exports\case04`).
+   - Click **Export**.
 7. Copy both files to the WSL side and rename:
 
     cp /mnt/c/Users/<you>/Downloads/.../SMIR.Lower_limb.051Y.F.CT.168-Pelvis-Thighs_Reconstruction.nii \
