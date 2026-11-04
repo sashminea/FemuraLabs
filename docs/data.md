@@ -183,3 +183,15 @@ segmentations". Summary:
 - **Split-volume subjects with an external transform (e.g., z061) require manual geometry reconstruction.** Some subjects in the Zenodo record (like `z061`) are stored upside down and split into two halves, accompanied by a `Transform-Upside-Down.h5` file. Opening the MRML scene in Slicer fixes the visual 3D view, but **Slicer exports the NIfTI labelmap with identity geometry** (`origin=(0,0,0)`, `direction=identity`). If you merge this with the raw crop geometry, both legs will end up on the positive X side of the coordinate system. 
   
   **The fix:** Run `scripts/data/fix_upside_down_geometry.py`. It flips the X and Z axes to correct the upside-down orientation, and mathematically shifts the X origin so the midpoint between the two femurs sits exactly at `X=0`. This restores anatomical left/right symmetry without altering the shape of the bones.
+- **The `SMIR.Body...nii` file is a full-body CT scan, not a lower-limb crop.** The dataset provides whole-body CTs, and the `Lower_limb...nrrd` files are cropped versions used for segmentation. Do not attempt to load the raw `.nii` alongside a manually fixed `combined_seg.nii`—they will not align. For landmarking, always open the MRML scene, which applies the `Transform-Upside-Down.h5` to the full-body CT and aligns the original segmentations. Place landmarks directly on the original segmentations in the scene.
+
+### The Full-Body vs. Cropped Trap
+
+The Zenodo record (8302449) is highly inconsistent. You will encounter three types of subjects:
+1. **Clean Lower-Limb**: A single `SMIR.Lower_limb...nrrd` with correctly aligned segmentations. (e.g., case01, case03).
+2. **Split Volumes**: Separate `Pelvis-Thighs` and `Shanks-Feet` volumes. Sometimes these are the same patient, but **often they are different patients** combined into one zip. Always check the `PatientID` in the filenames. If they differ, discard the subject.
+3. **Full-Body with H5 Transform**: A raw `SMIR.Body...nii` CT and a `Transform-Upside-Down.h5` file. 
+
+**Why the H5 file matters:** The full-body CTs were scanned feet-first or head-first, meaning the raw `.nii` array is upside down. The MRML scene applies the H5 transform to orient it correctly. When Slicer exports a labelmap from this scene, it strips the affine transform (leaving `origin=(0,0,0)`) and applies the rotation to the voxel array. 
+
+**Do not load the raw `.nii` alongside a manually fixed `combined_seg.nii`.** They will not align visually. Always use the MRML scene for landmarking, or follow the full-body crop pipeline in the runbook.

@@ -10,6 +10,18 @@ New entries go at the top.
 
 ---
 
+## D043: Use full-body CTs and crop in Python, avoiding mixed-patient lower-limb splits
+
+**Decision:** For all future subjects, we will use the raw full-body CT (`SMIR.Body...`) and its associated MRML scene. We will export the transformed CT and segmentations from Slicer, and crop them to the lower limb in Python using a 3D bounding box. We reject the pre-cropped `SMIR.Lower_limb...` files if they are split into separate upper/lower volumes.
+
+**Alternative rejected:** Using the pre-cropped `Lower_limb` zips where the pelvis-thighs and shanks-feet belong to different patients.
+
+**Reason:** The Zenodo dataset contains a severe data quality trap: some zips combine the pelvis of one patient with the shanks of another to save space. Training a 3D U-Net or extracting geometric landmarks from mismatched anatomies is scientifically invalid. Furthermore, the raw full-body scans are stored upside down and require the `Transform-Upside-Down.h5` file (loaded via the MRML scene) to be anatomically correct. Attempting to manually flip and center the arrays (as done for `z061`) is error-prone and breaks visual alignment with the raw CT. Cropping the transformed full-body scan guarantees perfect anatomical consistency between the CT and the masks.
+
+**Consequence:** The dataset preparation pipeline now requires Slicer (to export the transformed CT and masks), a Python script to crop to the bounding box, and Slicer again to place landmarks on the cropped CT. The resulting cropped CTs are larger than the original lower-limb crops (e.g., 512×512×1500), which is fine for U-Net training.
+
+---
+
 ## D042: Toolkit modules are grouped by domain (fileio, imaging, geometry, reporting)
 
 **Decision:** The flat `toolkit/` folder was refactored into four domain subpackages: `fileio`, `imaging`, `geometry`, and `reporting`. `cli.py`, `service/`, and `training/` stayed at the root.

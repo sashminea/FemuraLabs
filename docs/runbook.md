@@ -1119,3 +1119,26 @@ Verify the fix by checking that `femur_L x` is positive and `femur_R x` is negat
     print('femur_L x:', m['femur_L'].centroid_world[0])
     print('femur_R x:', m['femur_R'].centroid_world[0])
     "
+
+**Important:** The raw `SMIR.Body...nii` is a full-body CT. Do not use it for visual verification of `combined_seg_fixed.nii`. Instead, use the MRML scene for landmarking: open the scene, place landmarks on the original segmentations, and save. The scene's coordinate system matches the manually fixed `combined_seg.nii`.
+
+## Handling Full-Body Subjects (The Bounding Box Crop)
+
+When a subject provides a `SMIR.Body...nii` and a `Transform-Upside-Down.h5`, do not attempt to manually flip or center the arrays. Follow this workflow:
+
+**Step 1: Export Transformed Data from Slicer**
+1. Open the `.mrml` scene in 3D Slicer.
+2. In the `Data` module, select the full-body CT and save it as `ct_transformed.nii.gz` (this bakes the H5 transform into the geometry).
+3. Export the segmentations to NIfTI (`thighs_transformed.nii.gz`, `shanks_transformed.nii.gz`) and merge them to `combined_seg_transformed.nii.gz`.
+
+**Step 2: Crop to the Lower Limb (Python)**
+Run the bounding box crop script. This finds the Z-extent of the bones and crops out the ribs and arms, while preserving the correct geometry.
+
+    PYTHONPATH=src python scripts/data/crop_to_lower_limb.py \
+      --ct data/raw/case04/ct_transformed.nii.gz \
+      --seg data/raw/case04/combined_seg_transformed.nii.gz \
+      --out-ct data/raw/case04/ct_cropped.nii.gz \
+      --out-seg data/raw/case04/combined_seg.nii
+
+**Step 3: Place Landmarks**
+Load `ct_cropped.nii.gz` and `combined_seg.nii` into Slicer. They will be perfectly aligned and right-side up. Place your 10 landmarks and save to `data/ref/landmarks_case04.mrk.json`.
