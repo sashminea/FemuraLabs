@@ -402,7 +402,7 @@ sprint-doc's small-bend example. All numbers are hand-computable in
 under a minute, which is what makes this the D10 pass test.
 
     PYTHONPATH=src python -c "
-    from femuralabs.toolkit.alignment import hka_deviation, mad, knee_error_to_angle_deg
+    from femuralabs.toolkit.geometry.alignment import hka_deviation, mad, knee_error_to_angle_deg
     def show(name, H, K, A):
         print(f'{name}: hka={hka_deviation(H,K,A):+7.3f}  mad={mad(H,K,A):+7.3f}')
     show('straight R ', (-100,0,0), (-100,0,-420), (-100,0,-820))
@@ -439,8 +439,8 @@ Both return the acute angle (≤ 90°), per D037.
 
     PYTHONPATH=src python -c "
     import numpy as np
-    from femuralabs.toolkit.landmark_io import load_landmarks
-    from femuralabs.toolkit.alignment import hka_deviation, mldfa, mpta
+    from femuralabs.toolkit.fileio.landmark import load_landmarks
+    from femuralabs.toolkit.geometry.alignment import hka_deviation, mldfa, mpta
     h = load_landmarks('data/ref/landmarks_case02.mrk.json')
     hip, knee, ankle = np.array(h['femoral_head_R']), np.array(h['knee_centre_R']), np.array(h['ankle_centre_R'])
     c_med, c_lat = np.array(h['condyle_medial_R']), np.array(h['condyle_lateral_R'])
@@ -464,8 +464,8 @@ will sit closer to 87–90.
 
     PYTHONPATH=src python -c "
     import numpy as np
-    from femuralabs.toolkit.landmark_io import load_landmarks
-    from femuralabs.toolkit.alignment import hka_deviation, mad, mldfa, mpta
+    from femuralabs.toolkit.fileio.landmark import load_landmarks
+    from femuralabs.toolkit.geometry.alignment import hka_deviation, mad, mldfa, mpta
 
     h = load_landmarks('data/ref/landmarks_case02.mrk.json')
     for side in ('R', 'L'):
@@ -687,7 +687,7 @@ the three geometry fields. The array shape is `(z, y, x)`; the three
 geometry fields are `(x, y, z)`. Comparing the two lines is the fastest
 way to confirm the file's geometry is not swapped.
 
-    PYTHONPATH=src python -c "from femuralabs.toolkit.io_volume import load_volume; \
+    PYTHONPATH=src python -c "from femuralabs.toolkit.fileio.volume import load_volume; \
       v = load_volume('data/raw/case01/combined_seg.nii'); \
       print(v.array.shape, v.spacing, v.origin)"
 
@@ -710,8 +710,8 @@ Reads `combined_seg.nii` and produces one `BoneMask` per bone, each
 carrying a boolean mask, voxel count, volume in mL, and centroid in LPS
 world coordinates.
 
-    PYTHONPATH=src python -c "from femuralabs.toolkit.io_volume import load_volume; \
-      from femuralabs.toolkit.masks import extract_masks; \
+    PYTHONPATH=src python -c "from femuralabs.toolkit.fileio.volume import load_volume; \
+      from femuralabs.toolkit.imaging.masks import extract_masks; \
       m = extract_masks(load_volume('data/raw/case01/combined_seg.nii')); \
       [print(f'{b.name:<8} {b.voxel_count:>10}  {b.volume_ml:>8.1f} mL  x={b.centroid_world[0]:>9.1f} y={b.centroid_world[1]:>9.1f} z={b.centroid_world[2]:>9.1f}') for b in m.values()]"
 
@@ -746,9 +746,9 @@ the command above is for inspection, not verification. Run
 Reads the combined segmentation, extracts one bone, builds the mesh in
 world millimetres, and writes an STL.
 
-    PYTHONPATH=src python -c "from femuralabs.toolkit.io_volume import load_volume; \
-      from femuralabs.toolkit.masks import extract_masks; \
-      from femuralabs.toolkit.mesh import mask_to_mesh, save_stl; \
+    PYTHONPATH=src python -c "from femuralabs.toolkit.fileio.volume import load_volume; \
+      from femuralabs.toolkit.imaging.masks import extract_masks; \
+      from femuralabs.toolkit.imaging.mesh import mask_to_mesh, save_stl; \
       v = load_volume('data/raw/case01/combined_seg.nii'); \
       m = extract_masks(v)['femur_R']; \
       verts, faces = mask_to_mesh(m.mask, v.spacing, v.origin, v.direction); \
@@ -785,9 +785,9 @@ and prints the edge counts and volume side by side.
 
     PYTHONPATH=src python - <<'PY'
     import numpy as np
-    from femuralabs.toolkit.io_volume import load_volume
-    from femuralabs.toolkit.masks import extract_masks
-    from femuralabs.toolkit.mesh import mask_to_mesh, signed_volume, edge_incidence
+    from femuralabs.toolkit.fileio.volume import load_volume
+    from femuralabs.toolkit.imaging.masks import extract_masks
+    from femuralabs.toolkit.imaging.mesh import mask_to_mesh, signed_volume, edge_incidence
 
     v = load_volume('data/raw/case01/combined_seg.nii')
     m = extract_masks(v)['femur_R']
@@ -879,7 +879,7 @@ millimetres. The loader respects the file's `coordinateSystem` field:
 RAS files are negated in x and y to give LPS; LPS files are returned
 unchanged.
 
-    PYTHONPATH=src python -c "from femuralabs.toolkit.landmark_io import load_landmarks; \
+    PYTHONPATH=src python -c "from femuralabs.toolkit.fileio.landmark import load_landmarks; \
       h = load_landmarks('data/ref/landmarks_case01.mrk.json'); \
       [print(f'{k:<22}', tuple(round(v,1) for v in val)) for k, val in h.items()]"
 
@@ -905,11 +905,11 @@ the hand-placed reference.
 
     PYTHONPATH=src python -c "
     import numpy as np
-    from femuralabs.toolkit.io_volume import load_volume
-    from femuralabs.toolkit.masks import extract_masks
-    from femuralabs.toolkit.mesh import mask_to_mesh
-    from femuralabs.toolkit.landmarks import femoral_head_centre
-    from femuralabs.toolkit.landmark_io import load_landmarks
+    from femuralabs.toolkit.fileio.volume import load_volume
+    from femuralabs.toolkit.imaging.masks import extract_masks
+    from femuralabs.toolkit.imaging.mesh import mask_to_mesh
+    from femuralabs.toolkit.geometry.landmarks import femoral_head_centre
+    from femuralabs.toolkit.fileio.landmark import load_landmarks
     v = load_volume('data/raw/case01/combined_seg.nii')
     m = extract_masks(v); h = load_landmarks('data/ref/landmarks_case01.mrk.json')
     for side in ('R', 'L'):
@@ -951,11 +951,11 @@ intermediate values that decided the fit.
 
     PYTHONPATH=src python -c "
     import numpy as np
-    from femuralabs.toolkit.io_volume import load_volume
-    from femuralabs.toolkit.masks import extract_masks
-    from femuralabs.toolkit.mesh import mask_to_mesh
-    from femuralabs.toolkit.landmarks import ankle_centre
-    from femuralabs.toolkit.landmark_io import load_landmarks
+    from femuralabs.toolkit.fileio.volume import load_volume
+    from femuralabs.toolkit.imaging.masks import extract_masks
+    from femuralabs.toolkit.imaging.mesh import mask_to_mesh
+    from femuralabs.toolkit.geometry.landmarks import ankle_centre
+    from femuralabs.toolkit.fileio.landmark import load_landmarks
     v = load_volume('data/raw/case01/combined_seg.nii')
     m = extract_masks(v)
     h = load_landmarks('data/ref/landmarks_case01.mrk.json')
@@ -1022,8 +1022,8 @@ Run this after merging a new subject to ensure the left/right orientation didn't
 
     PYTHONPATH=src python -c "
     import numpy as np
-    from femuralabs.toolkit.io_volume import load_volume
-    from femuralabs.toolkit.masks import extract_masks
+    from femuralabs.toolkit.fileio.volume import load_volume
+    from femuralabs.toolkit.imaging.masks import extract_masks
     v = load_volume('data/raw/caseXX/combined_seg.nii')
     m = extract_masks(v)
     for name, b in m.items():
@@ -1036,9 +1036,9 @@ Run this after saving a `.mrk.json` file to ensure all 10 points are present, on
 
     PYTHONPATH=src python -c "
     import numpy as np
-    from femuralabs.toolkit.landmark_io import load_landmarks
-    from femuralabs.toolkit.io_volume import load_volume
-    from femuralabs.toolkit.masks import extract_masks
+    from femuralabs.toolkit.fileio.landmark import load_landmarks
+    from femuralabs.toolkit.fileio.volume import load_volume
+    from femuralabs.toolkit.imaging.masks import extract_masks
     h = load_landmarks('data/ref/landmarks_caseXX.mrk.json')
     v = load_volume('data/raw/caseXX/combined_seg.nii')
     m = extract_masks(v)
@@ -1098,3 +1098,24 @@ If running manually:
 **Label Mapping Trap (v2.18.0):**
 - The `total` task outputs femurs at label `75` (Left) and `76` (Right).
 - The `appendicular_bones` task outputs Tibias at label `2` and Fibulas at label `3`. **It does not separate Left and Right**. You must split these arrays at the midline (world x=0) to separate the left and right legs.
+
+### Fixing upside-down or shifted geometry
+
+If the merged segmentation results in both femurs having a positive X coordinate (or if the Z-axis is flipped), the subject was likely stored upside down and Slicer dropped the affine transform. 
+
+Do not use the raw CT geometry. Instead, run:
+
+    PYTHONPATH=src python scripts/data/fix_upside_down_geometry.py \
+      --in data/raw/case04/combined_seg.nii \
+      --out data/raw/case04/combined_seg_fixed.nii
+
+Verify the fix by checking that `femur_L x` is positive and `femur_R x` is negative:
+
+    PYTHONPATH=src python -c "
+    from femuralabs.toolkit.fileio.volume import load_volume
+    from femuralabs.toolkit.imaging.masks import extract_masks
+    v = load_volume('data/raw/case04/combined_seg_fixed.nii')
+    m = extract_masks(v)
+    print('femur_L x:', m['femur_L'].centroid_world[0])
+    print('femur_R x:', m['femur_R'].centroid_world[0])
+    "
