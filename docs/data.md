@@ -209,5 +209,6 @@ To ensure reproducibility, here is the exact mapping between our internal `caseX
 | `case04` | `z061.zip` | `039Y.F.CT.58316` | Full-Body | Upside-down, requires H5 transform. Missing talus mask. |
 | `case05` | `z062.zip` | `043Y.M.CT.58317` | Full-Body | Upside-down, requires H5 transform. |
 | `case06` | `z063.zip` | `072Y.F.CT.58318` | Full-Body | Upside-down. Has severe metal artifacts (bilateral hip/knee implants). |
+| `case07` | `z064.zip` | `069Y.M.CT.58314` | Full-Body | Upside-down, requires H5 transform. |
 
 **Note on `case02`:** The original download (`010.zip`) contained a pelvis from one patient and shanks from another. It was discarded to maintain anatomical consistency. `023.zip` is a clean, single-patient lower-limb volume.
