@@ -187,3 +187,4 @@ The TotalSegmentator comparison was run on 3mm downsampled CTs using a bounding-
 
 FemuraLabs uses two Zenodo records, the [VSDFullBodyBoneReconstruction](https://doi.org/10.5281/zenodo.8302449) segmentations and surface models (CC BY-NC-SA 4.0) and the CT collection they were built from (CC BY-NC-SA 3.0 Switzerland, DOI [10.5281/zenodo.8270365](https://doi.org/10.5281/zenodo.8270365)). The data is not committed to this repository. The code is MIT-licensed, but the MIT licence does not cover the data, which stays under its own licences. If you use this work, please cite it with the details in `CITATION.cff`.
 
+
