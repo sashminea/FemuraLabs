@@ -30,8 +30,8 @@ Surface-click landmarks placed by eye sit at 7–9 mm.
 |---|---|---|
 | `femoral_head_R` | Centre of the largest axial circle of the right femoral head | standard mechanical-axis definition |
 | `femoral_head_L` | Same, left | same |
-| `knee_centre_R` | Axial at joint line: midpoint between centres of the medial and lateral condyle blobs | Paley; verify before citing |
-| `knee_centre_L` | Same, left | same |
+| knee_centre_R | Bounding-box rule at +15 mm above the lowest femur vertex, shifted +6 mm lateral / −8.5 mm anterior (LPS). Fitted to the case01–case08 hand reference. See D047. | bounding-box convention |
+| knee_centre_L | Same, left | same |
 | `ankle_centre_R` | Coronal at talar dome: midpoint between the medial and lateral malleoli, projected to top of talus | standard mechanical-axis definition |
 | `ankle_centre_L` | Same, left | same |
 | `condyle_medial_R` | Coronal at joint line: most distal-medial point of the medial femoral condyle | needed for mLDFA |
@@ -72,6 +72,10 @@ the centre of the talar dome alone, (c) the midpoint of the tibial
 plafond. **This project uses (a).** A different project could use
 different rules without either being wrong; the validation report
 states the convention used.
+
+**Knee centre convention.** The legacy two-blob rule (midpoint of the two condyle centroid blobs in the lowest 5 mm slab) is preserved as `method="condyle"` but not default. It fails structurally when one condyle hangs more than 5 mm above the other (case04L, 07L, 08L, where the lateral condyle sits 5.5–9.0 mm above the medial). The default `method="box"` uses the bounding box of a slab +15 mm above the lowest femoral vertex, shifted by the fitted offsets. The shift is not a notch detector: it reproduces where the annotator placed the click, and it is documented as a fitted convention rather than an anatomical feature.
+
+**HKA plane convention.** HKA is reported in the **coronal plane** (y-component zeroed), matching the plane used for mLDFA and MPTA. The full 3D angle is written to the JSON as `HKA3D_{side}` for reference. On subjects with anterior-posterior knee offsets (metal implants, fixed flexion), the 3D angle is inflated by 5–12° relative to the coronal angle; see D045.
 
 ## 5. Measured hand-placement repeat distance (case01 pilot)
 

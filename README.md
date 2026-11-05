@@ -28,37 +28,45 @@ With three centres per leg, the angles follow. HKA deviation is reported as posi
 
 ## Results
 
-To find out how well this works, the pipeline was run on **eight** cadaveric subjects from the [VSDFullBodyBoneReconstruction](https://doi.org/10.5281/zenodo.8302449) dataset and compared with landmarks that were placed by hand in 3D Slicer. The dataset provided a mix of clean lower-limb CTs and upside-down full-body CTs requiring geometric transforms. 
+The pipeline was run on **8 cadaveric subjects** from the [VSDFullBodyBoneReconstruction](https://doi.org/10.5281/zenodo.8302449) dataset, all compared against landmarks placed by hand in 3D Slicer. Two subjects have metal implants or severe deformation; they are reported separately because their errors are dominated by the artifacts, not the rules.
 
-The first question is how far the automatic landmarks land from the hand-placed ones. Because two subjects had severe postmortem deformations or metal implants, the errors on those cases are reported separately, as they skew the mean.
+### Landmark errors
 
-| Landmark | Average error on clean subjects | Average error across all 8 subjects | Typical gap between hand placements |
+| Landmark | Mean error (clean 6) | Mean error (all 8) | Hand repeat |
 |---|---|---|---|
-| Femoral head centre | ~4.0 mm | 11.5 mm* | 4 to 6 mm |
-| Ankle centre | 4.7 mm | 5.1 mm | about 2 mm |
-| Knee centre | 8.1 mm | 10.5 mm | 3 to 5 mm |
+| Femoral head | 2.6–2.7 mm | 6.5–9.7 mm* | 4–6 mm |
+| Knee centre | 4.3 mm | 4.9–5.3 mm | 3–5 mm |
+| Ankle centre | 5.6–6.9 mm | 6.0–7.3 mm | ~2 mm |
 
-*\*The overall femoral head mean is skewed by `case04` (severe deformation, 30 mm) and `case06` (bilateral metal implants, 32 mm). On clean anatomy, the sphere fit lands well within the hand-placement repeat distance.*
+*\*Cases 04 and 06 fail at 26–36 mm (deformation, metal), and are excluded from the clean column.*
 
-What ultimately matters is whether the angles come out right, so the table below compares the angles computed from the automatic landmarks with the same angles computed from the hand-placed ones, across all 8 subjects.
+The femoral head sphere fit is inside the hand repeat distance on clean anatomy. The knee centre rule (`method="box"`, +15 mm slab with fitted offsets, see [`docs/decisions.md`](docs/decisions.md) D047) is within 5 mm on 11 of 16 knees; the previous rule failed at 25 mm on cases with tilted condyles.
 
-| Angle | Subjects (n) | Mean absolute difference |
+### Alignment angles
+
+| Angle | n | Mean abs | Mean abs (clean 6) |
+|---|---|---|---|
+| HKA R (coronal) | 8 | 1.65° | **0.98°** |
+| HKA L (coronal) | 8 | 1.26° | **0.98°** |
+| mLDFA R | 8 | 1.23° | 0.82° |
+| MPTA R | 8 | 0.62° | 0.58° |
+
+HKA is reported in the coronal plane (y-component zeroed), matching the clinical definition and the plane `mldfa`/`mpta` already use. The full 3D angle is recorded in the JSON as `HKA3D_{side}` for reference. On the clean subjects the coronal HKA error is ~1°, comparable to inter-observer spread and well inside the 5–10° corrections typical of high tibial osteotomy.
+
+mLDFA and MPTA agree sub-degree on average. **Caveat:** the joint-line points are the same hand clicks in the auto and hand computations, so this measures the mechanical-axis contribution, not the accuracy of an automatic joint-line detector.
+
+Full per-case tables and the section-by-section limitations are in [`reports/validation.md`](reports/validation.md), [`reports/landmark_errors.md`](reports/landmark_errors.md) and [`reports/angles_case.md`](reports/angles_case.md).
+
+### Segmentation (TotalSegmentator vs human reference)
+
+The reference masks are cortical shells (medullary canal unannotated), so TotalSegmentator fills ~144 mL per femur that the human did not. On case05 (3 mm `--fast`):
+
+| Bone | Dice (filled ref) | Dice (unfilled ref) |
 |---|---|---|
-| HKA, right leg | 8 | 2.24° |
-| HKA, left leg | 8 | 2.77° |
-| mLDFA, right leg | 8 | 0.79° |
-| MPTA, right leg | 8 | 0.66° |
+| femur_R | 0.947 | 0.794 |
 
-To give those numbers some scale, the hand-placed HKA values across the subjects run from severe valgus (about −9°) to severe varus (about +11°). The joint-line angles agree extremely closely with the hand reference (sub-degree error), despite the documented noise on the plateau landmarks. The complete breakdown, including per-subject tables, is in [`reports/validation.md`](reports/validation.md), [`reports/landmark_errors.md`](reports/landmark_errors.md) and [`reports/angles_case.md`](reports/angles_case.md).
+The filled Dice of 0.95 is the honest comparison; the raw 0.79 measures the annotation-protocol difference. HD95 values in this report were regenerated after the axis-scale fix (D046); earlier versions had a scaling error on anisotropic voxels.
 
-### Segmentation Comparison (TotalSegmentator)
-To validate the reference masks themselves, we ran TotalSegmentator (a pre-trained neural network) on three of the CT volumes and compared its output to the human segmentations. Even on 3mm downsampled data, the agreement is strong:
-
-| Bone | Mean Dice | Mean HD95 (mm) |
-|---|---|---|
-| Femur | 0.73 | 7.7 |
-| Tibia | 0.67 | 5.5 |
-| Fibula | 0.74 | 2.8 |
 
 ## Getting started
 

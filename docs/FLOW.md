@@ -33,6 +33,14 @@ hka_deviation and mad take three LPS points (hip, knee, ankle) and return a sign
 
 ---
 
+## Knee centre box rule and coronal HKA
+
+<img src="flow/knee-box-hka-coronal.png" alt="Knee centre box rule and coronal HKA">
+
+knee_centre uses the bounding box of a +15 mm axial femur slab with fitted lateral/anterior offsets, replacing the lowest-slab two-blob rule which failed on tilted-condyle subjects (case07L, case08L). hka_deviation_coronal projects all three points to y=0 before computing the angle, matching the clinical coronal definition and the plane mldfa/mpta already use. The 3D angle is kept as hka_deviation and written to the JSON as HKA3D_{side} for reference.
+
+---
+
 <!-- INSERT HERE -->
 
 

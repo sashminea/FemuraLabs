@@ -10,6 +10,56 @@ New entries go at the top.
 
 ---
 
+## D048: Reference masks are hollow; `fill_bone_interior` is a switchable A/B, not silent
+
+**Decision:** The VSD reference segmentations label only the cortical shell, not the trabecular interior. `fill_bone_interior(mask)` fills the enclosed background in each axial slice. `extract_masks` reports both `volume_ml` (raw) and `volume_filled_ml` (after fill). `pipeline_demo.py` has `--fill-interior` as an opt-in flag; it is not applied silently.
+
+**Alternative rejected:** Fill inside `extract_masks` by default, or ignore hollowness.
+
+**Reason:** On case05 femur_R, raw mask is 413 mL, filled is 557 mL (1.35×). The TotalSegmentator comparison and every mesh-based landmark rule (sphere fit, condyle split, box slab) inherit the raw geometry. Filling before meshing fixes the femoral head sphere fit (case05 femur_R error dropped from 11.17 mm to 1.08 mm when filled interior was used as mesh input). However, filling is a modeling choice: the annotated reference is a shell, and downstream research may want the shell. Silent filling would be dishonest.
+
+**Consequence:** All scripts that build meshes accept `--fill-interior`. `compare_segmentations.py` reports `dice` (filled reference) and `dice_unfilled` (raw). `reports/segmentation_errors.md` has both columns. Case04 and case06 still fail the femoral head rule with metal/deformation even after filling, which is expected and documented.
+
+---
+
+
+## D047: Knee centre uses bounding-box rule at +15 mm, not lowest-slab condyle
+
+**Decision:** `knee_centre(method="box")` (the default) takes the x and y midpoint of a 2 mm axial slab at +15 mm above the lowest femoral vertex, shifted by fitted offsets (+6.0 mm lateral, −8.5 mm anterior in LPS). z = lowest vertex + 6 mm. The legacy `method="condyle"` (lowest-slab two-blob split) and `method="notch"` (convex-hull gap) are kept but not default.
+
+**Alternative rejected:** Continue using `method="condyle"` and accept 25 mm errors on tilted-condyle subjects.
+
+**Reason:** The condyle rule fails structurally when the lateral condyle's lowest point sits more than 5 mm above the medial condyle's (07L: 6.0 mm, 08L: 5.5 mm, 04L: 9.0 mm). On those cases the lowest 5 mm slab contains only one condyle, so "two-blob mean" is just that one condyle's centroid — 20–28 mm from the hand click. The notch rule's gap centroid sits posterior (18 mm on case01) because the intercondylar gap opens toward the back. The bounding box of a slab +15 mm up is stable: 16 knees gave (6.0 ± 4.7) mm lateral, (−8.5 ± 2.3) mm anterior offsets, and leave-one-subject-out RMS of ~5.1 mm in x.
+
+**Consequence:** Case07L knee error: 27.18 mm → 3.70 mm. Case08L: 24.70 mm → 4.86 mm. Case05R: 11.17 mm → 3.73 mm. Case04L: ~28 mm → 9.31 mm (metal artifact floor). The offsets are fitted to the case01–case08 hand reference; refitting them if the reference changes is documented in the docstring. `--knee-method` in `pipeline_demo.py` selects the rule, default `box`.
+
+---
+
+
+## D046: HD95 scales (z, y, x) array indices by (x, y, z) spacing
+
+**Decision:** `_surface_distances` in `metrics.py` computes `np.argwhere(surf) * np.array(spacing)[::-1]` so that array axis 0 (z) is scaled by spacing[2] and axis 2 (x) by spacing[0]. The previous code multiplied the two without reordering.
+
+**Alternative rejected:** Transpose the whole array to (x, y, z) before computing distances.
+
+**Reason:** `Volume.array` is `(z, y, x)` (numpy default from SimpleITK) but `Volume.spacing` is `(x, y, z)`. All published HD95 values on the case01–case08 cohort predated this fix and were wrong by a factor of up to ~4× on anisotropic voxels (the case01 CT is ~1×1×0.7 mm). Dice was correct because it depends only on boolean counts; only the distance computation was affected.
+
+**Consequence:** Every HD95 number in `reports/segmentation_errors.md` must be regenerated. The old `seg_results_case0*.json` files (case01–case03) are stale on HD95 as well as on `dice_unfilled`. Regenerating them requires rerunning TotalSegmentator for those subjects.
+
+---
+
+## D045: HKA deviation is coronal, not 3D
+
+**Decision:** `hka_deviation_coronal` projects all three points to the y=0 plane (dropping the AP coordinate) and computes the signed angle in the coronal plane. `hka_deviation` (the 3D version) is kept and reported under a separate key `HKA3D_{side}` for reference, not as the headline metric.
+
+**Alternative rejected:** Report the 3D angle as HKA.
+
+**Reason:** Clinical HKA is defined in the coronal (frontal) plane, the same plane `mldfa` and `mpta` already use via `project_to_plane`. The 3D angle is inflated by any anterior-posterior kink at the knee: on case06, the 3D HKA error was 12.66° while the coronal error was 2.51°. Reporting the 3D value as HKA inflated the mean error from 1.65° to 1.90° on the right leg and from 1.26° to 2.15° on the left, without improving clinical validity.
+
+**Consequence:** `pipeline_demo.py` writes both `HKA_{side}` (coronal, headline) and `HKA3D_{side}` (3D, reference). The README table reports the coronal value. `calculate_agreement.py` tracks both. Anyone consuming the JSON must know which key is which.
+
+---
+
 ## D043: Use full-body CTs and crop in Python, avoiding mixed-patient lower-limb splits
 
 **Decision:** For all future subjects, we will use the raw full-body CT (`SMIR.Body...`) and its associated MRML scene. We will export the transformed CT and segmentations from Slicer, and crop them to the lower limb in Python using a 3D bounding box. We reject the pre-cropped `SMIR.Lower_limb...` files if they are split into separate upper/lower volumes.

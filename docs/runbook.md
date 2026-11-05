@@ -581,6 +581,33 @@ for side in ('R', 'L'):
 
 An error over 8 mm or a `plafond_z` within 3 mm of the tibia bottom means the search window found the malleolar tip, not the plafond.
 
+### A.5 Knee centre harness (all cases, all levels)
+
+Runs `knee_centre` with the box rule across all subjects and levels and reports the signed per-axis error. Used to fit `BOX_LATERAL_OFFSET_MM` and `BOX_ANTERIOR_OFFSET_MM` in `landmarks.py`. If the hand reference for a new cohort is placed differently, refit and update the constants.
+
+    PYTHONPATH=src python -c "
+    import glob, re, numpy as np
+    from femuralabs.toolkit.fileio.volume import load_volume
+    from femuralabs.toolkit.imaging.masks import extract_masks
+    from femuralabs.toolkit.imaging.mesh import mask_to_mesh
+    from femuralabs.toolkit.fileio.landmark import load_landmarks
+    from femuralabs.toolkit.geometry.landmarks import knee_centre
+
+    rows = []
+    for p in sorted(glob.glob('data/ref/landmarks_case*.mrk.json')):
+        case = re.search(r'case\d+', p).group()
+        v = load_volume(f'data/raw/{case}/combined_seg.nii'); m = extract_masks(v); h = load_landmarks(p)
+        for side, lat in (('R', -1), ('L', 1)):
+            fv, _ = mask_to_mesh(m[f'femur_{side}'].mask, v.spacing, v.origin, v.direction)
+            hand = np.array(h[f'knee_centre_{side}'])
+            c, _ = knee_centre(fv, None, method='box')
+            d = c - hand
+            rows.append((lat*d[0], d[1], d[2], np.linalg.norm(d)))
+    r = np.array(rows)
+    print(f'box rule: mean signed (lat, post, sup) {r[:, :3].mean(0).round(1)}')
+    print(f'          SD {r[:, :3].std(0).round(1)}  mean |err| {r[:, 3].mean():.1f}')
+    "
+
 ---
 
 ## Appendix B: Flow diagrams

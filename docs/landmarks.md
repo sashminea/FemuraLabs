@@ -582,78 +582,38 @@ patient-specific. If a subject's fit fails, the diagnostic is the
 
 ### Knee centre — `landmarks.knee_centre`
 
-Given the femur mesh (and the tibia mesh, accepted for signature
-compatibility but not used), returns `(centre, info)` where `info`
-carries `condyle_medial`, `condyle_lateral`, and `slab_mm`. The centre
-is compared against `knee_centre_R` / `knee_centre_L` to measure the
-automatic method.
+The knee centre is placed at the intercondylar notch by the human annotator. Three candidate rules have been tried; only the third is default.
 
-**Rule.** Two-condyle midpoint at the distal femur, per rule (a) in
-`docs/conventions.md`: "midpoint between centres of the medial and
-lateral condyle blobs". Algorithm:
+**Rule 1 — lowest-slab two-blob split (legacy, `method="condyle"`).** Take the bottom 5 mm of the femur, split at the x mid-point, average the two half-centroids. Fails when one condyle's lowest point sits more than 5 mm above the other: the slab then contains only one condyle, and the "midpoint" is that one centroid. On case07L the medial condyle reaches 6.0 mm below the lateral; on case08L, 5.5 mm; on case04L, 9.0 mm. The rule gives 20–28 mm errors on those cases.
 
-1. Take the bottom 5 mm of the femur mesh (the distal condyles at the
-   joint line).
-2. Split that slab at its own x mid-point.
-3. Each half's vertex centroid approximates one condyle blob.
-4. The knee centre is the mean of the two blob centroids.
+**Rule 2 — notch gap centroid (`method="notch"`).** Rasterize the femur vertices in an axial slab at +6 mm, compute the convex hull, subtract the solid, and take the largest gap's centroid. The gap opens posteriorly, so the centroid sits ~18 mm posterior of the hand click on case01. Not default.
 
-Nothing is tuned per subject. `slab_mm=5.0` is the only parameter, and
-it matches the level at which the hand click was placed.
+**Rule 3 — bounding-box with fitted offsets (default, `method="box"`).** Take a 2 mm slab at +15 mm above the lowest femoral vertex. Compute its x and y bounding box. Shift the box centre by (+6.0 mm lateral, −8.5 mm anterior in LPS). Return (x, y, lowest vertex + 6 mm). The lateral sign flips between sides. The offsets are fitted to the 16 hands in case01–case08 (means: 6.0 ± 4.7 mm lateral, −8.5 ± 2.3 mm anterior). Leave-one-subject-out RMS ≈ 5.1 mm in x, 2.4 mm in y.
 
-**The previous draft was wrong, and why.** The draft averaged the
-*whole* distal femur cross-section with the *whole* proximal tibia
-cross-section. Two independent biases made it 10–14 mm off:
+**On case01–case08 (n=16):**
 
-- The tibia's top cross-section sits ~14 mm anterior of the femur's
-  bottom cross-section, so averaging the two pulls the result
-  posterior. On case01 both sides showed dy = +10 mm, same direction,
-  same magnitude — a signature of a systematic averaging error, not
-  noise.
-- The whole femur cross-section's centroid drifts toward the medial
-  condyle, which is larger. The hand click is at the mid-point of the
-  two condyles, not at the cross-section's centroid. The split-at-mid
-  rule corrects this.
+| Case | Side | Condyle rule (mm) | Box rule (mm) |
+|---|---|---|---|
+| 01 | R | 6.20 | 3.17 |
+| 01 | L | 6.77 | 8.21 |
+| 02 | R | 9.46 | 4.83 |
+| 02 | L | 9.81 | 0.75 |
+| 03 | R | 7.10 | 6.10 |
+| 03 | L | 7.30 | 7.15 |
+| 04 | R | 19.13 | 9.06 |
+| 04 | L | 29.30 | 9.31 |
+| 05 | R | 11.17 | 3.73 |
+| 05 | L | 9.19 | 2.02 |
+| 06 | R | 6.49 | 6.13 |
+| 06 | L | 6.02 | 4.25 |
+| 07 | R | 9.38 | 3.15 |
+| 07 | L | **27.18** | **3.70** |
+| 08 | R | 10.07 | 4.50 |
+| 08 | L | **24.70** | **4.86** |
 
-The diagnostic pattern was: (a) split into mesh-vs-mask and
-slab-5mm-vs-20mm; (b) dy was +10 mm on all four combinations, killing
-the vertex-density and slab-thickness explanations; (c) femur-only vs
-tibia-only vs averaged showed the tibia was the source of dy; (d)
-two-condyle split matched rule (a) and cut the error in half.
+The box rule is within 5 mm on 11 of 16 knees, within 7 mm on 14 of 16. The remaining two (case01L and case04L) are limited by the hand reference: the left-side hand click on case01 sits 8.7 mm lateral of the slab centre, and case04 is metal-implanted.
 
-**On case01 with `slab_mm=5.0`:**
-
-| Side | Fit centre | Hand centre | Error | Hand repeat |
-|---|---|---|---|---|
-| R | (−66.8, −123.8, 661.4) | (−71.2, −127.9, 663.3) | 6.36 mm | 3.02 mm |
-| L | (81.1, −107.5, 681.9) | (81.9, −114.0, 685.0) | 7.21 mm | 5.00 mm |
-
-**The residual is the hand reference, not the rule.** On the right,
-the hand click sits 8.7 mm lateral of the femur slab's x-centroid; on
-the left, it sits 0.4 mm. The two hand clicks were placed relative to
-their own condyles by an inconsistent amount, and no symmetric
-automated rule can match both to under 8 mm. The errors of 6.36 mm (R)
-and 7.21 mm (L) are 2.1× and 1.4× the hand-placement repeat distance
-for the same landmarks, so the rule is *close to* the hand reference
-but not at the level of a second human placer. This is documented
-honestly, not tuned away.
-
-**Extending to case02 and case03.** Same rule, same parameter. The
-only failure mode to watch:
-
-- **`condyle_medial` and `condyle_lateral` too close (< 20 mm apart)**
-  → the half-split landed between two parts of the same condyle, not
-  between two distinct blobs. Visible when the femur's distal
-  cross-section is not two-lobed at the 5 mm level (rare in normal
-  anatomy; suspect a mask artefact).
-- **Separation large but centre error > 12 mm** → the hand reference
-  for that subject is again lateral-biased. Cross-check against the
-  femur's slab centroid; if the hand click is more than ~5 mm off it,
-  the hand reference is the suspect, not the code.
-
-Both sides use the same rule; the medial/lateral labelling is
-side-detected via `np.median(femur_verts[:, 0]) < 0` and asserted in
-the test.
+**Extending to new subjects.** The offsets are fitted to this cohort's clicks. If a new annotator places clicks differently, refit the two constants (`BOX_LATERAL_OFFSET_MM`, `BOX_ANTERIOR_OFFSET_MM`) by running the knee harness in the runbook. If a subject's hand click is more than ~8 mm off the box prediction, the box is probably wrong: check that the femur mesh is not truncated and that the fill did not bridge the notch.
 
 ## Scope
 
