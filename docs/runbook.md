@@ -1124,21 +1124,15 @@ Verify the fix by checking that `femur_L x` is positive and `femur_R x` is negat
 
 ## Handling Full-Body Subjects (The Bounding Box Crop)
 
-When a subject provides a `SMIR.Body...nii` and a `Transform-Upside-Down.h5`, do not attempt to manually flip or center the arrays. Follow this workflow:
+When a subject provides a full-body CT (`SMIR.Body...nii`), separate Thigh/Shank segmentations, and a `Transform-Upside-Down.h5`, do not attempt to use Slicer for geometry extraction. Slicer drops the H5 translation when exporting, which breaks alignment.
 
-**Step 1: Export Transformed Data from Slicer**
-1. Open the `.mrml` scene in 3D Slicer.
-2. In the `Data` module, select the full-body CT and save it as `ct_transformed.nii.gz` (this bakes the H5 transform into the geometry).
-3. Export the segmentations to NIfTI (`thighs_transformed.nii.gz`, `shanks_transformed.nii.gz`) and merge them to `combined_seg_transformed.nii.gz`.
+Instead, use the memory-safe Python pipeline. It applies the H5 transform mathematically, finds the physical bounding box of the masks, extracts *only* the lower limb from the CT (bypassing OOM), and centers the patient at X=0.
 
-**Step 2: Crop to the Lower Limb (Python)**
-Run the bounding box crop script. This finds the Z-extent of the bones and crops out the ribs and arms, while preserving the correct geometry.
+    PYTHONPATH=src python scripts/data/process_full_body_raw.py \
+      --ct /path/to/SMIR.Body...nii \
+      --thighs-seg /path/to/Pelvis-Thighs...seg.nrrd \
+      --shanks-seg /path/to/Shanks-Feet...seg.nrrd \
+      --transform /path/to/Transform-Upside-Down.h5 \
+      --out-dir data/raw/caseXX
 
-    PYTHONPATH=src python scripts/data/crop_to_lower_limb.py \
-      --ct data/raw/case04/ct_transformed.nii.gz \
-      --seg data/raw/case04/combined_seg_transformed.nii.gz \
-      --out-ct data/raw/case04/ct_cropped.nii.gz \
-      --out-seg data/raw/case04/combined_seg.nii
-
-**Step 3: Place Landmarks**
-Load `ct_cropped.nii.gz` and `combined_seg.nii` into Slicer. They will be perfectly aligned and right-side up. Place your 10 landmarks and save to `data/ref/landmarks_case04.mrk.json`.
+This outputs `ct_cropped.nii` and `combined_seg.nii`, which are perfectly aligned, right-side up, and ready for landmark placement in Slicer.
