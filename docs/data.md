@@ -184,6 +184,7 @@ segmentations". Summary:
   
   **The fix:** Run `scripts/data/fix_upside_down_geometry.py`. It flips the X and Z axes to correct the upside-down orientation, and mathematically shifts the X origin so the midpoint between the two femurs sits exactly at `X=0`. This restores anatomical left/right symmetry without altering the shape of the bones.
 - **The `SMIR.Body...nii` file is a full-body CT scan, not a lower-limb crop.** The dataset provides whole-body CTs, and the `Lower_limb...nrrd` files are cropped versions used for segmentation. Do not attempt to load the raw `.nii` alongside a manually fixed `combined_seg.nii`—they will not align. For landmarking, always open the MRML scene, which applies the `Transform-Upside-Down.h5` to the full-body CT and aligns the original segmentations. Place landmarks directly on the original segmentations in the scene.
+- **Severe metal artifacts ruin automated femoral head fits.** Some subjects (e.g., case06) have bilateral total hip and knee arthroplasties (implants). The dense metal causes beam hardening, which corrupts the HU values and the segmentations around the implant. The `femoral_head_centre` sphere fit fails on these cases (errors > 30 mm) because the mask is fragmented. The pipeline does not crash, but the resulting HKA and mLDFA angles for these subjects are clinically invalid and should be excluded from geometric validation.
 
 ### The Full-Body vs. Cropped Trap
 
@@ -195,3 +196,18 @@ The Zenodo record (8302449) is highly inconsistent. You will encounter three typ
 **Why the H5 file matters:** The full-body CTs were scanned feet-first or head-first, meaning the raw `.nii` array is upside down. The MRML scene applies the H5 transform to orient it correctly. When Slicer exports a labelmap from this scene, it strips the affine transform (leaving `origin=(0,0,0)`) and applies the rotation to the voxel array. 
 
 **Do not load the raw `.nii` alongside a manually fixed `combined_seg.nii`.** They will not align visually. Always use the MRML scene for landmarking, or follow the full-body crop pipeline in the runbook.
+
+## Subject-to-Case Mapping
+
+To ensure reproducibility, here is the exact mapping between our internal `caseXX` identifiers and the files in the Zenodo record (`8302449`).
+
+| Internal ID | Zenodo Zip | Subject ID (Patient) | Layout Type | Notes |
+|---|---|---|---|---|
+| `case01` | `006.zip` | `051Y.F.CT.168` | Lower-Limb | Clean single volume. Baseline subject. |
+| `case02` | `023.zip` | `074Y.M.CT.521` | Lower-Limb | Replaced `010.zip` (which had mixed-patient split volumes). |
+| `case03` | `014.zip` | `030Y.F.CT.547` | Lower-Limb | Clean single volume. |
+| `case04` | `z061.zip` | `039Y.F.CT.58316` | Full-Body | Upside-down, requires H5 transform. Missing talus mask. |
+| `case05` | `z062.zip` | `043Y.M.CT.58317` | Full-Body | Upside-down, requires H5 transform. |
+| `case06` | `z063.zip` | `072Y.F.CT.58318` | Full-Body | Upside-down. Has severe metal artifacts (bilateral hip/knee implants). |
+
+**Note on `case02`:** The original download (`010.zip`) contained a pelvis from one patient and shanks from another. It was discarded to maintain anatomical consistency. `023.zip` is a clean, single-patient lower-limb volume.
