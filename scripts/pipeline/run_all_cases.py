@@ -5,7 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-CASES = ["case01", "case02", "case03", "case04"]
+
+CASES = ["case01", "case02", "case03", "case04", "case05"]
 
 def main():
     Path("reports").mkdir(exist_ok=True)

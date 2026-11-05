@@ -100,8 +100,14 @@ def main():
         s_map = load_segment_map(args.shanks_seg, False)
         
         for name, target_id in TARGET_LABELS.items():
-            if name in t_map: combined_arr[t_arr_ref == t_map[name]] = target_id
-            if name in s_map: combined_arr[s_arr_ref == s_map[name]] = target_id
+            if name in t_map:
+                mask = (t_arr_ref == t_map[name])
+                combined_arr[mask] = target_id
+                logging.info(f"Mapped {name} from thighs (idx {t_map[name]}) -> {target_id} ({np.sum(mask)} voxels)")
+            if name in s_map:
+                mask = (s_arr_ref == s_map[name])
+                combined_arr[mask] = target_id
+                logging.info(f"Mapped {name} from shanks (idx {s_map[name]}) -> {target_id} ({np.sum(mask)} voxels)")
 
         del t_arr_ref, s_arr_ref; gc.collect()
 
