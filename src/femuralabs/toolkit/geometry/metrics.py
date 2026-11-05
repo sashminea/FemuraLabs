@@ -24,21 +24,20 @@ def iou_score(mask_a: np.ndarray, mask_b: np.ndarray) -> float:
 
 from scipy.spatial import cKDTree
 
-def _surface_distances(mask_a: np.ndarray, mask_b: np.ndarray, spacing: tuple[float, float, float]) -> np.ndarray:
-    """Distances from the surface of mask_a to the nearest surface voxel of mask_b."""
+def _surface_distances(mask_a, mask_b, spacing):
+    """Distances (mm) from the surface of mask_a to the nearest surface voxel of mask_b.
+
+    Arrays are (z, y, x) but `spacing` is (x, y, z), so reverse it before scaling.
+    """
+    sp_zyx = np.asarray(spacing, dtype=float)[::-1]
     struct = ndimage.generate_binary_structure(3, 1)
     surf_a = mask_a & ~ndimage.binary_erosion(mask_a, struct)
     surf_b = mask_b & ~ndimage.binary_erosion(mask_b, struct)
-    
-    # Get coordinates of surface voxels and scale by spacing
-    coords_a = np.argwhere(surf_a) * np.array(spacing)
-    coords_b = np.argwhere(surf_b) * np.array(spacing)
-    
+    coords_a = np.argwhere(surf_a) * sp_zyx
+    coords_b = np.argwhere(surf_b) * sp_zyx
     if len(coords_b) == 0:
-        return np.array([float('inf')])
-        
-    tree = cKDTree(coords_b)
-    dists, _ = tree.query(coords_a)
+        return np.array([float("inf")])
+    dists, _ = cKDTree(coords_b).query(coords_a)
     return dists
 
 def hd95(mask_a: np.ndarray, mask_b: np.ndarray, spacing: tuple[float, float, float]) -> float:

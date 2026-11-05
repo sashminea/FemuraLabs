@@ -168,3 +168,17 @@ def mpta(knee, ankle, plateau_medial, plateau_lateral) -> float:
     axis_dist = project_to_plane(ankle - knee)
     joint_med = project_to_plane(plateau_medial - plateau_lateral)
     return _angle_between_acute(axis_dist, joint_med)
+
+
+def _to_coronal(p):
+    p = np.array(p, dtype=float)    # copy, never mutate the caller's array
+    p[1] = 0.0                      # drop AP (y), the same plane mldfa/mpta use
+    return p
+
+def hka_deviation_coronal(hip, knee, ankle) -> float:
+    """Signed HKA deviation (deg) in the coronal plane; + varus, - valgus."""
+    return hka_deviation(_to_coronal(hip), _to_coronal(knee), _to_coronal(ankle))
+
+def mad_coronal(hip, knee, ankle) -> float:
+    """Signed MAD (mm) in the coronal plane; + varus, - valgus."""
+    return mad(_to_coronal(hip), _to_coronal(knee), _to_coronal(ankle))

@@ -43,3 +43,17 @@ def test_left_right_are_on_correct_sides(masks):
     """
     assert masks["femur_L"].centroid_world[0] > masks["femur_R"].centroid_world[0]
     assert masks["tibia_L"].centroid_world[0] > masks["tibia_R"].centroid_world[0]
+
+
+def test_fill_bone_interior_restores_hollow_cylinder():
+    from femuralabs.toolkit.imaging.masks import fill_bone_interior
+    
+    yy, xx = np.ogrid[:40, :40]
+    r2 = (yy - 20) ** 2 + (xx - 20) ** 2
+    m = np.zeros((20, 40, 40), bool)
+    m[:] = r2 <= 15 ** 2
+    solid = m.copy()
+    m[:, r2 <= 6 ** 2] = False                       # medullary canal
+    
+    assert fill_bone_interior(m).sum() == solid.sum()
+    assert fill_bone_interior(np.zeros_like(m)).sum() == 0

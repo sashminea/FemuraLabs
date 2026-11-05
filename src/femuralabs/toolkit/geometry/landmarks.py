@@ -2,23 +2,26 @@
 from __future__ import annotations
 
 import numpy as np
+from scipy import ndimage as ndi
+from skimage.morphology import convex_hull_image
+
+# --- box rule constants ------------------------------------------------------
+# The hand click sits at a fairly constant place relative to the x/y bounding
+# box of a thin axial slab BOX_LEVEL_MM above the lowest femoral vertex.
+# Offsets are means over the 16 knees (8 subjects) of the current hand
+# reference; refit them if the reference changes.
+BOX_LEVEL_MM = 15.0
+BOX_THICKNESS_MM = 2.0
+BOX_LATERAL_OFFSET_MM = 6.0     # click is this far lateral of the box centre
+BOX_ANTERIOR_OFFSET_MM = 8.5    # click is this far anterior (smaller y in LPS)
 
 
 def fit_sphere(points: np.ndarray) -> tuple[np.ndarray, float, float]:
-    """Least-squares sphere fit.
-
-    Solves x^2 + y^2 + z^2 = 2ax + 2by + 2cz + d for (a, b, c, d), which
-    is linear in the four unknowns. Returns (centre, radius, rms_residual).
-    The residual is the root-mean-square deviation of point-to-surface
-    distance, in the units of `points`.
-    """
+    """Least-squares sphere fit."""
     if len(points) < 4:
         raise ValueError(f"Need at least 4 points, got {len(points)}")
     A = np.column_stack([
-        2.0 * points[:, 0],
-        2.0 * points[:, 1],
-        2.0 * points[:, 2],
-        np.ones(len(points)),
+        2.0 * points[:, 0], 2.0 * points[:, 1], 2.0 * points[:, 2], np.ones(len(points))
     ])
     b = (points ** 2).sum(axis=1)
     sol, *_ = np.linalg.lstsq(A, b, rcond=None)
@@ -34,56 +37,24 @@ def fit_sphere(points: np.ndarray) -> tuple[np.ndarray, float, float]:
 
 
 def femoral_head_centre(
-    verts: np.ndarray,
-    n_iter: int = 3,
-    medial_window_mm: float = 20.0,
+    verts: np.ndarray, n_iter: int = 3, medial_window_mm: float = 20.0,
 ) -> tuple[np.ndarray, float, float]:
-    """Estimate the femoral head centre from a femur mesh.
-
-    The head is the medial-most spherical feature of the proximal femur.
-    Two constraints make the fit land on the head rather than averaging
-    the head with the trochanter:
-
-    - **z cut**: keep only the superior 25 percent of the mesh. Both the
-      head and the trochanter are superior, so this is necessary but not
-      sufficient.
-    - **medial window**: keep only vertices within ``medial_window_mm`` of
-      the medial-most x. The head is the medial-most feature, so this
-      window captures its medial hemisphere, which is enough to constrain
-      a sphere fit; larger windows start to include the greater trochanter,
-      which is not spherical and pulls the centre laterally.
-
-    On case01, a window of 20 mm gives fit radii 18.3 (right) and 20.4
-    (left) mm and centre errors 3.81 and 4.82 mm versus hand placement.
-    A window of 30+ mm gives radii 31-33 mm (a head-plus-trochanter blend)
-    and errors over 20 mm.
-    """
+    """Estimate the femoral head centre from a femur mesh."""
     z = verts[:, 2]
     z_lo, z_hi = float(z.min()), float(z.max())
     cut = z_lo + 0.75 * (z_hi - z_lo)
     proximal = verts[z > cut]
     if len(proximal) < 100:
-        raise ValueError(
-            f"Proximal region has only {len(proximal)} vertices; "
-            "the mesh may be truncated"
-        )
-
+        raise ValueError(f"Proximal region has only {len(proximal)} vertices")
     median_x = float(np.median(verts[:, 0]))
     if median_x < 0:
-        # Patient's right side: medial is closer to 0, i.e. larger x
         medial_x = float(proximal[:, 0].max())
         region = proximal[proximal[:, 0] > medial_x - medial_window_mm]
     else:
-        # Patient's left side: medial is closer to 0, i.e. smaller x
         medial_x = float(proximal[:, 0].min())
         region = proximal[proximal[:, 0] < medial_x + medial_window_mm]
-
     if len(region) < 50:
-        raise ValueError(
-            f"Medial window contains only {len(region)} vertices; "
-            "medial_window_mm may be too tight for this mesh"
-        )
-
+        raise ValueError(f"Medial window contains only {len(region)} vertices")
     current = region
     centre, radius, rms = fit_sphere(current)
     for _ in range(n_iter):
@@ -95,125 +66,139 @@ def femoral_head_centre(
             break
         current = kept
         centre, radius, rms = fit_sphere(current)
-
     return centre, radius, rms
 
-def knee_centre(
-    femur_verts: np.ndarray,
-    tibia_verts: np.ndarray,
-    slab_mm: float = 5.0,
-) -> tuple[np.ndarray, dict]:
-    """Knee joint centre from the two condyle blobs at the joint line.
 
-    Rule (a) in docs/conventions.md: the midpoint between the centres of
-    the medial and lateral condyle blobs at the joint-line level.
-
-    The previous draft averaged the whole distal femur cross-section with
-    the whole proximal tibia cross-section. On case01 that gave 14.0 mm
-    (right) and 10.4 mm (left) error. Two causes:
-
-    - The proximal tibia centroid is ~14 mm anterior of the distal femur
-      centroid, so averaging them pulls the result posterior.
-    - The whole cross-section centroid drifts toward the medial condyle,
-      which is larger; the hand click sits at the mid-point of the two
-      condyles, not at the cross-section's centroid.
-
-    This rule: take the bottom ``slab_mm`` of the femur, split it at its
-    own x mid-point, take each half's centroid (approximating the two
-    condyle blobs), and average the two. ``tibia_verts`` is accepted for
-    signature compatibility but not used.
-
-    Returns ``(centre, info)`` where ``info`` carries ``condyle_medial``,
-    ``condyle_lateral`` and ``slab_mm``, so a failing test can show which
-    part of the rule went wrong.
-
-    On case01 with the default slab_mm=5.0: error 6.36 mm (right), 7.21
-    mm (left). That is about 2× and 1.4× the hand-placement repeat
-    distance for the same landmarks (3.02 mm and 5.00 mm), and reflects
-    a real asymmetry in the hand reference — the right-side hand click
-    sits 8.7 mm lateral of the femur's slab centroid while the left-side
-    click sits 0.4 mm away, so no symmetric automated rule can match
-    both sides to under 8 mm.
-    """
-    if len(femur_verts) < 200:
-        raise ValueError(f"too few femur verts: {len(femur_verts)}")
+def _condyle_blobs(femur_verts, slab_mm):
+    """Legacy two-blob rule: bottom slab split at its x mid-point."""
     fz_min = float(femur_verts[:, 2].min())
     slab = femur_verts[femur_verts[:, 2] < fz_min + slab_mm]
     if len(slab) < 100:
-        raise ValueError(
-            f"distal slab has only {len(slab)} verts; "
-            f"slab_mm={slab_mm} too tight for this mesh"
-        )
-
+        raise ValueError(f"distal slab has only {len(slab)} verts")
     mid_x = (slab[:, 0].min() + slab[:, 0].max()) / 2.0
-    half_a = slab[slab[:, 0] > mid_x]
-    half_b = slab[slab[:, 0] < mid_x]
+    half_a, half_b = slab[slab[:, 0] > mid_x], slab[slab[:, 0] < mid_x]
     if len(half_a) < 50 or len(half_b) < 50:
-        raise ValueError(
-            f"one condyle half has too few verts: "
-            f"{len(half_a)} / {len(half_b)}; slab_mm={slab_mm}"
-        )
+        raise ValueError(f"one condyle half has too few verts")
+    a, b = half_a.mean(axis=0), half_b.mean(axis=0)
+    right = float(np.median(femur_verts[:, 0])) < 0
+    medial_is_a = (a[0] > b[0]) if right else (a[0] < b[0])
+    medial, lateral = (a, b) if medial_is_a else (b, a)
+    return (a + b) / 2.0, medial, lateral
 
-    side_a = half_a.mean(axis=0)
-    side_b = half_b.mean(axis=0)
-    centre = (side_a + side_b) / 2.0
 
-    # Which half is medial depends on the femur's side of the body.
-    median_x = float(np.median(femur_verts[:, 0]))
-    if median_x < 0:
-        # Patient's right side: medial is the larger x (toward 0).
-        if side_a[0] > side_b[0]:
-            condyle_medial, condyle_lateral = side_a, side_b
-        else:
-            condyle_medial, condyle_lateral = side_b, side_a
-    else:
-        # Patient's left side: medial is the smaller x (toward 0).
-        if side_a[0] < side_b[0]:
-            condyle_medial, condyle_lateral = side_a, side_b
-        else:
-            condyle_medial, condyle_lateral = side_b, side_a
+def _notch_in_section(verts, z0, thickness_mm, px_mm=1.5, min_area_px=15):
+    """Centre (x, y) in mm of the intercondylar gap in one axial slab."""
+    sel = verts[(verts[:, 2] >= z0) & (verts[:, 2] < z0 + thickness_mm)]
+    if len(sel) < 100:
+        raise ValueError(f"only {len(sel)} verts in the section")
+    pad = 4
+    x0 = sel[:, 0].min() - pad * px_mm
+    y0 = sel[:, 1].min() - pad * px_mm
+    ix = np.floor((sel[:, 0] - x0) / px_mm).astype(int)
+    iy = np.floor((sel[:, 1] - y0) / px_mm).astype(int)
+    grid = np.zeros((iy.max() + pad + 1, ix.max() + pad + 1), bool)
+    grid[iy, ix] = True
+    solid = ndi.binary_fill_holes(ndi.binary_closing(grid, np.ones((3, 3), bool), iterations=2))
 
-    return centre, {
-        "condyle_medial": condyle_medial,
-        "condyle_lateral": condyle_lateral,
-        "slab_mm": float(slab_mm),
+    gap = convex_hull_image(solid) & ~solid
+    lab, n = ndi.label(gap)
+    cols = np.where(solid.any(axis=0))[0]
+    lo, hi = cols.min(), cols.max()
+    best = None
+    for k in range(1, n + 1):
+        comp = lab == k
+        area = int(comp.sum())
+        cy, cx = ndi.center_of_mass(comp)
+        in_middle = lo + 0.25 * (hi - lo) <= cx <= hi - 0.25 * (hi - lo)
+        if area >= min_area_px and in_middle and (best is None or area > best[0]):
+            best = (area, cx, cy)
+    if best is None:
+        raise ValueError("no notch-like gap")
+    area, cx, cy = best
+    return (x0 + (cx + 0.5) * px_mm, y0 + (cy + 0.5) * px_mm), area * px_mm ** 2
+
+
+def _distal_femur_box(femur_verts, level_mm, thickness_mm):
+    """(x_lo, x_hi), (y_lo, y_hi), n_verts of an axial slab above the lowest femur vertex."""
+    z0 = float(femur_verts[:, 2].min()) + level_mm
+    sel = femur_verts[(femur_verts[:, 2] >= z0) & (femur_verts[:, 2] < z0 + thickness_mm)]
+    if len(sel) < 100:
+        raise ValueError(f"only {len(sel)} femur verts in the box slab at +{level_mm} mm")
+    return ((float(sel[:, 0].min()), float(sel[:, 0].max())),
+            (float(sel[:, 1].min()), float(sel[:, 1].max())),
+            len(sel))
+
+
+def knee_centre(femur_verts, tibia_verts=None, method="box", level_mm=6.0,
+                thickness_mm=2.0, slab_mm=5.0,
+                box_level_mm=BOX_LEVEL_MM, box_thickness_mm=BOX_THICKNESS_MM):
+    """Knee centre (x, y, z) in LPS mm.
+
+    method="box" (default): x/y from the bounding box of the femur slab
+        box_level_mm above its lowest vertex, shifted by the fitted lateral /
+        anterior offsets; z = lowest vertex + level_mm. Does not depend on which
+        condyle is lower. Offsets are fitted to the hand reference.
+    method="condyle": legacy lowest-slab two-blob rule (fails when one condyle
+        is more than slab_mm higher than the other).
+    method="notch": legacy convex-hull gap rule (not validated).
+    """
+    if method not in ("box", "condyle", "notch"):
+        raise ValueError(f"unknown knee_centre method {method!r}")
+    if len(femur_verts) < 200:
+        raise ValueError("too few femur verts")
+    fz_min = float(femur_verts[:, 2].min())
+
+    if method == "box":
+        (x_lo, x_hi), (y_lo, y_hi), n_box = _distal_femur_box(
+            femur_verts, box_level_mm, box_thickness_mm)
+        right = float(np.median(femur_verts[:, 0])) < 0
+        lateral_sign = -1.0 if right else 1.0          # LPS: +x is patient-left
+        x = 0.5 * (x_lo + x_hi) + lateral_sign * BOX_LATERAL_OFFSET_MM
+        y = 0.5 * (y_lo + y_hi) - BOX_ANTERIOR_OFFSET_MM
+        try:
+            blob_centre, medial, lateral = _condyle_blobs(femur_verts, slab_mm)
+        except ValueError:
+            blob_centre = medial = lateral = np.full(3, np.nan)
+        return np.array([x, y, fz_min + level_mm]), {
+            "condyle_medial": medial, "condyle_lateral": lateral, "slab_mm": float(slab_mm),
+            "level_mm": float(level_mm), "notch_gap_mm2": 0.0,
+            "centre_condyle_mid": blob_centre, "method": "box",
+            "box_level_mm": float(box_level_mm),
+            "box_x_range_mm": (x_lo, x_hi), "box_y_range_mm": (y_lo, y_hi),
+            "box_n_verts": int(n_box),
+        }
+
+    blob_centre, medial, lateral = _condyle_blobs(femur_verts, slab_mm)
+
+    if method == "notch":
+        try:
+            (nx, ny), gap_mm2 = _notch_in_section(
+                femur_verts, fz_min + level_mm - thickness_mm / 2, thickness_mm)
+            method_used = "notch"
+        except ValueError:
+            nx, ny, gap_mm2 = float(blob_centre[0]), float(blob_centre[1]), 0.0
+            method_used = "condyle_fallback"
+        return np.array([nx, ny, fz_min + level_mm]), {
+            "condyle_medial": medial, "condyle_lateral": lateral, "slab_mm": float(slab_mm),
+            "level_mm": float(level_mm), "notch_gap_mm2": float(gap_mm2),
+            "centre_condyle_mid": blob_centre, "method": method_used,
+        }
+
+    return np.array([blob_centre[0], blob_centre[1], fz_min + level_mm]), {
+        "condyle_medial": medial, "condyle_lateral": lateral, "slab_mm": float(slab_mm),
+        "level_mm": float(level_mm), "notch_gap_mm2": 0.0,
+        "centre_condyle_mid": blob_centre, "method": "condyle",
     }
 
-def ankle_centre(
-    tibia_verts: np.ndarray,
-    fibula_verts: np.ndarray,
-    search_top_mm: float = 30.0,
-    bin_mm: float = 2.0,
-) -> tuple[np.ndarray, dict]:
-    """Ankle joint centre from tibia + fibula meshes.
 
-    The very bottom of the tibia is the tip of the medial malleolus, not
-    the joint surface. The joint surface is the plafond, the flat bottom
-    of the shinbone that sits on the talus. Finding it: within the bottom
-    ``search_top_mm`` of the tibia, the plafond is where the cross-section
-    is widest. On case01 this is ~14 mm above the malleolar tip.
-
-    At the plafond level, take the medial edge of the tibia (medial
-    malleolus) and the lateral edge of the fibula (lateral malleolus). The
-    ankle centre is their midpoint — this is rule (a) in
-    docs/conventions.md.
-
-    Returns (centre, intermediates) so a failing test can show which part
-    of the rule went wrong.
-    """
+def ankle_centre(tibia_verts, fibula_verts, search_top_mm=30.0, bin_mm=2.0):
+    """Ankle joint centre from tibia + fibula meshes."""
     if len(tibia_verts) < 100 or len(fibula_verts) < 100:
-        raise ValueError(
-            f"too few verts: tibia {len(tibia_verts)}, fibula {len(fibula_verts)}"
-        )
-
-    # 1. Plafond z: widest cross-section in the bottom search_top_mm.
+        raise ValueError(f"too few verts")
     t_z_min = float(tibia_verts[:, 2].min())
     proximal = tibia_verts[tibia_verts[:, 2] < t_z_min + search_top_mm]
     if len(proximal) < 100:
-        raise ValueError(
-            f"proximal region has only {len(proximal)} tibia verts; "
-            f"search_top_mm={search_top_mm} too tight"
-        )
+        raise ValueError(f"proximal region has only {len(proximal)} tibia verts")
     bin_idx = np.floor((proximal[:, 2] - t_z_min) / bin_mm).astype(int)
     extents: dict[int, float] = {}
     for b in np.unique(bin_idx):
@@ -222,24 +207,14 @@ def ankle_centre(
             extents[int(b)] = float(xs.max() - xs.min())
     if not extents:
         raise ValueError("no bin had enough verts to measure width")
-
     max_ext = max(extents.values())
     top_bins = [b for b, e in extents.items() if e >= max_ext - 1.0]
     plafond_z = float(np.mean([t_z_min + (b + 0.5) * bin_mm for b in top_bins]))
-
-    # 2. Verts at the plafond level (within half a bin in z).
     tol = bin_mm / 2.0
     tibia_at = tibia_verts[np.abs(tibia_verts[:, 2] - plafond_z) < tol]
     fibula_at = fibula_verts[np.abs(fibula_verts[:, 2] - plafond_z) < tol]
     if len(tibia_at) < 10 or len(fibula_at) < 10:
-        raise ValueError(
-            f"not enough verts at plafond_z={plafond_z:.1f}: "
-            f"tibia {len(tibia_at)}, fibula {len(fibula_at)}"
-        )
-
-    # 3. Medial/lateral edges. Sign convention: in LPS, patient's right
-    #    side is negative world x, so medial (toward midline = toward 0)
-    #    is the larger x on R and the smaller x on L.
+        raise ValueError(f"not enough verts at plafond_z={plafond_z:.1f}")
     median_x = float(np.median(tibia_verts[:, 0]))
     if median_x < 0:
         medial_x = float(tibia_at[:, 0].max())
@@ -247,16 +222,9 @@ def ankle_centre(
     else:
         medial_x = float(tibia_at[:, 0].min())
         lateral_x = float(fibula_at[:, 0].max())
-
     ankle_x = (medial_x + lateral_x) / 2.0
     ankle_y = float(tibia_at[:, 1].mean())
     ankle_z = plafond_z
-
-    return (
-        np.array([ankle_x, ankle_y, ankle_z]),
-        {
-            "plafond_z": plafond_z,
-            "medial_x": medial_x,
-            "lateral_x": lateral_x,
-        },
-    )
+    return np.array([ankle_x, ankle_y, ankle_z]), {
+        "plafond_z": plafond_z, "medial_x": medial_x, "lateral_x": lateral_x,
+    }

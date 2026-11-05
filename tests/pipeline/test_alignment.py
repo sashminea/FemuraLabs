@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+from femuralabs.toolkit.geometry.alignment import hka_deviation_coronal, mad_coronal
 
 from femuralabs.toolkit.geometry.alignment import (
     hka_deviation,
@@ -123,3 +124,11 @@ def test_mpta_synthetic_87_degrees():
     plateau_medial  = np.array([30.0, 0.0, 1.57])
     angle = mpta(knee, ankle, plateau_medial, plateau_lateral)
     assert angle == pytest.approx(87.0, abs=0.1)
+
+
+def test_coronal_hka_ignores_ap_offset():
+    hip, knee, ankle = (-80, 0, 400), (-84, 15, 200), (-80, 0, 0)    # right leg, knee lateral
+    assert hka_deviation_coronal(hip, knee, ankle) == pytest.approx(
+        2 * np.degrees(np.arctan(4 / 200)), rel=1e-6)                # about 2.29 deg varus
+    assert hka_deviation(hip, knee, ankle) > 8.0                     # 3D angle inflated by the AP offset
+    assert mad_coronal(hip, knee, ankle) == pytest.approx(4.0, abs=0.05)

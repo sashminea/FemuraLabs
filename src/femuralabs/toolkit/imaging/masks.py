@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
+from scipy import ndimage as ndi
 
 from femuralabs.toolkit.fileio.volume import Volume
 
@@ -28,7 +29,20 @@ class BoneMask:
     mask: np.ndarray                              # bool, same shape as source volume
     voxel_count: int
     volume_ml: float
+    volume_filled_ml: float                       # Volume if the interior holes are filled
     centroid_world: tuple[float, float, float]    # LPS millimetres
+
+
+def fill_bone_interior(mask: np.ndarray) -> np.ndarray:
+    """Fill the unlabeled interior of a cortical-shell mask, one axial slice (axis 0) at a time."""
+    boxes = ndi.find_objects(mask.astype(np.uint8))
+    if not boxes or boxes[0] is None:
+        return mask.copy()
+    box = boxes[0]
+    out = mask.copy()
+    # Iterate over each axial slice in the bounding box to fill holes
+    out[box] = np.stack([ndi.binary_fill_holes(s) for s in mask[box]])
+    return out
 
 
 def extract_masks(volume: Volume) -> dict[str, BoneMask]:
@@ -51,14 +65,24 @@ def extract_masks(volume: Volume) -> dict[str, BoneMask]:
         count = int(mask.sum())
         if count == 0:
             volume_ml = 0.0
+            volume_filled_ml = 0.0
             centroid_world = (float("nan"), float("nan"), float("nan"))
         else:
             volume_ml = count * voxel_volume_mm3 / 1000.0
+            
+            # Calculate the filled volume
+            filled_mask = fill_bone_interior(mask)
+            filled_count = int(filled_mask.sum())
+            volume_filled_ml = filled_count * voxel_volume_mm3 / 1000.0
+
             # Centroid in array order (z, y, x).
             z_i, y_i, x_i = np.argwhere(mask).mean(axis=0)
             # Reorder to (x, y, z) to match spacing, origin, direction.
             centroid_xyz = np.array([x_i, y_i, z_i])
             world = origin + D @ (np.array(volume.spacing) * centroid_xyz)
             centroid_world = tuple(float(v) for v in world)
-        result[name] = BoneMask(label, name, mask, count, volume_ml, centroid_world)
+            
+        result[name] = BoneMask(
+            label, name, mask, count, volume_ml, volume_filled_ml, centroid_world
+        )
     return result

@@ -48,22 +48,14 @@ def test_hd95_identical_masks():
 
 
 def test_hd95_single_voxel_offset():
-    a = np.zeros((10, 10, 10), dtype=bool)
-    a[2, 2, 2] = True
-    b = np.zeros((10, 10, 10), dtype=bool)
-    b[2, 2, 5] = True  # 3 voxels away along z
-    
-    # The surface distance is just the distance between these two voxels.
-    # With spacing (1,1,1), distance is 3.0 mm.
-    # Since it's symmetric and there's only one distance, the 95th percentile is 3.0
+    a = np.zeros((10, 10, 10), dtype=bool); a[2, 2, 2] = True
+    b = np.zeros((10, 10, 10), dtype=bool); b[2, 2, 5] = True   # 3 voxels along x (axis 2)
     assert hd95(a, b, spacing=(1.0, 1.0, 1.0)) == pytest.approx(3.0)
 
-
-def test_hd95_spacing_applied():
-    a = np.zeros((10, 10, 10), dtype=bool)
-    a[2, 2, 2] = True
-    b = np.zeros((10, 10, 10), dtype=bool)
-    b[2, 2, 5] = True  # 3 voxels away along z
-    
-    # If spacing is 2.0 in z, distance is 3 * 2.0 = 6.0 mm
-    assert hd95(a, b, spacing=(1.0, 1.0, 2.0)) == pytest.approx(6.0)
+def test_hd95_respects_axis_order():
+    """Arrays are (z, y, x); spacing is (x, y, z)."""
+    a = np.zeros((12, 12, 12), dtype=bool); a[5, 5, 5] = True
+    bz = np.zeros_like(a); bz[8, 5, 5] = True        # 3 voxels along z (axis 0)
+    bx = np.zeros_like(a); bx[5, 5, 8] = True        # 3 voxels along x (axis 2)
+    assert hd95(a, bz, spacing=(1.5, 1.0, 2.0)) == pytest.approx(6.0)
+    assert hd95(a, bx, spacing=(1.5, 1.0, 2.0)) == pytest.approx(4.5)

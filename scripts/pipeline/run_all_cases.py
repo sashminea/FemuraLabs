@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run pipeline_demo.py on all three cases and generate reports."""
+"""Run pipeline_demo.py on all subjects and generate reports."""
 import os
 import subprocess
 import sys
@@ -14,11 +14,13 @@ def main():
     for case in CASES:
         print(f"\n========================================\nRunning {case}...\n========================================")
         cmd = [
-            sys.executable, "scripts/pipeline/pipeline_demo.py", # <--- updated path
+            sys.executable, "scripts/pipeline/pipeline_demo.py",
             "--case", f"data/raw/{case}/combined_seg.nii",
             "--out", f"output/{case}",
             "--compare", f"data/ref/landmarks_{case}.mrk.json",
-            "--angles"
+            "--angles",
+            "--fill-interior",
+            "--knee-method", "box"
         ]
         env = {**os.environ, "PYTHONPATH": "src"}
         subprocess.run(cmd, check=True, env=env)
