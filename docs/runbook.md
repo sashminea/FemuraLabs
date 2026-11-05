@@ -2,7 +2,7 @@
 
 This document walks through the entire FemuraLabs pipeline, from environment setup to validation reports. Sections are ordered by the sequence you'd actually follow them in. If you're new to the repo, start at "Quick start".
 
-Every command here was run on the development workstation (WSL2 Ubuntu, 7.7 GB RAM, no GPU) and its output was captured. GUI procedures describe exactly what was clicked. Where you see "Expected:" followed by a block, that is the actual output — diff against yours to catch a silent error.
+Every command here was run on the development workstation (WSL2 Ubuntu, 7.7 GB RAM, no GPU) and its output was captured. **Paths in this document are placeholders** (`/path/to/FemuraLabs`, `/path/to/downloads`). You must replace them with the actual paths on your system.
 
 ---
 
@@ -11,7 +11,7 @@ Every command here was run on the development workstation (WSL2 Ubuntu, 7.7 GB R
 If you just want to confirm the repo works, run these three commands. They take ~2 minutes total and require no data.
 
 ```bash
-cd ~/FemuraLabs
+cd /path/to/FemuraLabs
 source .venv/bin/activate
 pytest -q                          # 62 tests, all passing
 docker build -t femuralabs-tool .  # ~2 min, downloads ~1.2 GB
@@ -27,7 +27,7 @@ If all three succeed, the code, dependencies, and container are working. Everyth
 Run this before any other command in a new terminal. Three checks: are you in the right folder, is the venv active, are unexpected files modified.
 
 ```bash
-cd ~/FemuraLabs
+cd /path/to/FemuraLabs
 source .venv/bin/activate
 pwd
 which python
@@ -76,16 +76,16 @@ The full list of subjects used, with their layouts, is in `docs/data.md` under "
 ### 3.1 Identify the subject's layout
 
 ```bash
-python scripts/dev/inventory_dataset.py --dir /mnt/d/Femuralabs/D07 --filter zXXX
+python scripts/dev/inventory_dataset.py --dir /path/to/downloads --filter zXXX
 ```
 
 Replace `zXXX` with the zip number (e.g., `z061`, `z062`, `z064`, `z066`). The script recurses any depth and prints absolute paths categorized by file type. If it lists a `SMIR.Body...nii` plus a `.h5` transform, the subject is Layout B. If it lists a `SMIR.Lower_limb...nrrd`, it's Layout A.
 
-**Before running the inventory**, download the zip and unzip it (approximately 1–2 GB per subject, all on the `D:` drive to preserve C: space):
+**Before running the inventory**, download the zip and unzip it (approximately 1–2 GB per subject, save it to a local drive with sufficient space):
 
 ```bash
-zenodo_get 8302449 -g "zXXX.zip" -o /mnt/d/Femuralabs/D07/temp_zips
-cd /mnt/d/Femuralabs/D07/temp_zips && unzip zXXX.zip
+zenodo_get 8302449 -g "zXXX.zip" -o /path/to/downloads
+cd /path/to/downloads && unzip zXXX.zip
 ```
 
 ### 3.2 Layout A: Standard lower-limb (e.g., case01, case02, case03)
@@ -99,12 +99,12 @@ These subjects ship with a clean full-limb CT (`SMIR.Lower_limb...nrrd`) and two
 3. `File → Add Data`, open the `-Pelvis-Thighs_Reconstruction.seg.nrrd`.
 4. **`Modules → Segment Editor`** — not Segmentations. Set the **Source Volume** dropdown to the full-limb CT.
 5. Click the small icon to the right of Source Volume (the **Segment Geometry** dialog). Confirm dimensions match the CT (~512 × 512 × 1637). Click **OK**. This step is mandatory — without it the export is crop-sized.
-6. **`Modules → Segmentations`** — not Segment Editor. Scroll to **"Export to files"**, set format `NIFTI (.nii)`, choose a `D:` destination folder, click **Export**.
-7. Copy the `.nii` and `.labels.csv` to WSL under a fixed name:
+6. **`Modules → Segmentations`** — not Segment Editor. Scroll to **"Export to files"**, set format `NIFTI (.nii)`, choose a temporary destination folder, click **Export**.
+7. Copy the `.nii` and `.labels.csv` to the project data folder under a fixed name:
 
 ```bash
-cp /mnt/d/Femuralabs/D07/exports/caseXX/*Pelvis-Thighs_Reconstruction.nii data/raw/caseXX/thighs_on_full.nii
-cp /mnt/d/Femuralabs/D07/exports/caseXX/*Pelvis-Thighs_Reconstruction.labels.csv data/raw/caseXX/thighs_on_full.labels.csv
+cp /path/to/exports/caseXX/*Pelvis-Thighs_Reconstruction.nii data/raw/caseXX/thighs_on_full.nii
+cp /path/to/exports/caseXX/*Pelvis-Thighs_Reconstruction.labels.csv data/raw/caseXX/thighs_on_full.labels.csv
 ```
 
 **Producing the shanks NIfTI:** repeat steps 3–7 with `-Shanks-Feet_Segmentation.seg.nrrd` (Segmentation, not Reconstruction), saving as `shanks_on_full.nii` / `shanks_on_full.labels.csv`.
@@ -148,10 +148,10 @@ Instead, one Python script does everything: it reads the H5 transform, extracts 
 
 ```bash
 PYTHONPATH=src python scripts/data/process_full_body_raw.py \
-  --ct /mnt/d/Femuralabs/D07/temp_zips/zXXX/zXXX/SMIR.Body...nii \
-  --thighs-seg /mnt/d/Femuralabs/D07/temp_zips/zXXX/zXXX/...Pelvis-Thighs_Reconstruction.seg.nrrd \
-  --shanks-seg /mnt/d/Femuralabs/D07/temp_zips/zXXX/zXXX/...Shanks-Feet_Segmentation.seg.nrrd \
-  --transform /mnt/d/Femuralabs/D07/temp_zips/zXXX/zXXX/Transform-Upside-Down.h5 \
+  --ct /path/to/downloads/zXXX/zXXX/SMIR.Body...nii \
+  --thighs-seg /path/to/downloads/zXXX/zXXX/...Pelvis-Thighs_Reconstruction.seg.nrrd \
+  --shanks-seg /path/to/downloads/zXXX/zXXX/...Shanks-Feet_Segmentation.seg.nrrd \
+  --transform /path/to/downloads/zXXX/zXXX/Transform-Upside-Down.h5 \
   --out-dir data/raw/caseXX
 ```
 
@@ -653,5 +653,3 @@ sitk.WriteImage(out, 'combined_seg.nii')
 ```
 
 The `<..._source>` values come from the subject's `.labels.csv` (Slicer writes one next to each export). Getting any of them wrong produces a silent, wrong `combined_seg.nii` — which is why `merge_segmentation.py` exists.
-
----
