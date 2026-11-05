@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import numpy as np
 
-CASES = ["case01", "case02", "case03"]
+CASES = ["case01", "case02", "case03", "case04", "case05", "case06", "case07", "case08"]
 OUT_DIR = Path("output")
 REPORT_DIR = Path("reports")
 

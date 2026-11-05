@@ -1,1138 +1,657 @@
 # Runbook
 
-Every command in this document was typed and its output captured on the
-workstation used to develop this repository. GUI procedures describe what
-was clicked; the file sizes and command outputs are real, not typical.
-Each section states what a stage does, what output to expect, what the step
-proves, and what a failure means.
+This document walks through the entire FemuraLabs pipeline, from environment setup to validation reports. Sections are ordered by the sequence you'd actually follow them in. If you're new to the repo, start at "Quick start".
 
-Nothing here requires a GPU. The container stages use the CPU only.
+Every command here was run on the development workstation (WSL2 Ubuntu, 7.7 GB RAM, no GPU) and its output was captured. GUI procedures describe exactly what was clicked. Where you see "Expected:" followed by a block, that is the actual output — diff against yours to catch a silent error.
 
+---
 
-## Environment setup
+## Quick start
 
-Run this before any other command in a new terminal. The three checks
-confirm the shell is in the project root, the virtual environment is active,
-and no unexpected files are modified.
+If you just want to confirm the repo works, run these three commands. They take ~2 minutes total and require no data.
 
-    cd ~/FemuraLabs
-    source .venv/bin/activate
-    pwd
-    which python
-    git status
+```bash
+cd ~/FemuraLabs
+source .venv/bin/activate
+pytest -q                          # 62 tests, all passing
+docker build -t femuralabs-tool .  # ~2 min, downloads ~1.2 GB
+docker run --rm femuralabs-tool    # runs the pipeline on a synthetic volume
+```
+
+If all three succeed, the code, dependencies, and container are working. Everything below is about real data.
+
+---
+
+## 1. Environment setup
+
+Run this before any other command in a new terminal. Three checks: are you in the right folder, is the venv active, are unexpected files modified.
+
+```bash
+cd ~/FemuraLabs
+source .venv/bin/activate
+pwd
+which python
+git status
+```
 
 Expected:
-
 - `pwd` ends in `FemuraLabs`.
 - `which python` contains `.venv`.
-- `git status` reports either `nothing to commit` or only files intended
-  for change.
+- `git status` reports either `nothing to commit` or only files intended for change.
 
-If `pwd` is wrong, later commands fail for unrelated reasons — a `pytest`
-run from the wrong folder often collects nothing, and a `docker build .`
-from the wrong folder copies the wrong context. If `which python` does not
-contain `.venv`, packages install into the system Python, not the project
-one.
+If `pwd` is wrong, later commands fail for unrelated reasons (e.g., `pytest` collects nothing, `docker build .` copies the wrong context). If `which python` does not contain `.venv`, pip installs into system Python instead of the project one.
 
 On Windows the activation command is `.venv\Scripts\Activate.ps1`.
 
+---
 
-## Running the test suite
+## 2. Running the test suite
 
-The suite tests the array helpers, the training utilities, the CLI, the
-report writer, and the verdict rule against hand-computed results. It is
-fast and it is the cheapest check that the existing behaviour is intact.
+The 62-test suite covers the array helpers, geometry primitives, mesh algorithms, landmark rules, alignment math, statistical functions, metrics, I/O, the CLI, the report writer, and the HTTP service. It runs in ~2 minutes and is the cheapest check that nothing regressed.
 
-    pytest -q
+```bash
+pytest -q
+```
 
-Expected: one line ending with `passed`, no line containing `failed`.
-The count varies as tests are added; `conftest.py` at the project root puts
-`src/` on the import path, so no `PYTHONPATH` prefix is needed.
+Expected: a line ending with `passed`, no `failed`. `conftest.py` at the project root puts `src/` on the import path, so no `PYTHONPATH` prefix is needed.
 
-If a test fails, the output names the file and line of the failed
-assertion. Do not change the test to match the code; change the code, or
-add an entry to `docs/decisions.md` explaining why the expected value was
-wrong.
+If a test fails, the output names the file and line. **Do not change the test to match the code** — change the code, or add an entry to `docs/decisions.md` explaining why the expected value was wrong. The tests are written against hand-verifiable values (e.g., a straight synthetic limb gives HKA = 0° exactly), so a test failure means the code drifted.
 
+**Disk space on WSL2:** `pytest` writes ~200 MB of temporary files per run. To prevent the WSL virtual disk from growing without bound, `pytest.ini` redirects `tmp_path` to `/dev/shm/pytest_tmp` (a RAM disk), and `conftest.py` wipes it after every run. If you ever see the C: drive filling up, that is a WSL2 virtual-disk issue, not a pytest issue — see `docs/decisions.md` D042.
 
-## Statistics summary tool
+---
 
-Reads a `.npy` file and prints shape, dtype, min, max and mean. Smallest
-end-to-end test of the installed package.
+## 3. Data preparation
 
-    mkdir -p data
-    python -c 'import numpy as np; np.save("data/small.npy", np.arange(6, dtype=np.float32).reshape(2,3))'
-    PYTHONPATH=src python -m femuralabs.toolkit.summary data/small.npy
+The Zenodo dataset (record 8302449, `VSDFullBodyBoneReconstruction`) ships in **three different layouts**. You need to identify which layout a subject uses before doing anything else.
+
+| Layout | What's in the zip | How we handle it |
+|---|---|---|
+| **A. Standard lower-limb** | One `SMIR.Lower_limb...nrrd`, four `.seg.nrrd` | Slicer export → `merge_segmentation.py` |
+| **B. Full-body upside-down** | One `SMIR.Body...nii`, four `.seg.nrrd`, `Transform-Upside-Down.h5`, `.mrml` | `process_full_body_raw.py` (pure Python) |
+| **C. Split volume, mixed patients** | Two separate CT volumes, sometimes from different patients | **Discard this subject.** Cannot be salvaged |
+
+The full list of subjects used, with their layouts, is in `docs/data.md` under "Subject-to-Case Mapping".
+
+### 3.1 Identify the subject's layout
+
+```bash
+python scripts/dev/inventory_dataset.py --dir /mnt/d/Femuralabs/D07 --filter zXXX
+```
+
+Replace `zXXX` with the zip number (e.g., `z061`, `z062`, `z064`, `z066`). The script recurses any depth and prints absolute paths categorized by file type. If it lists a `SMIR.Body...nii` plus a `.h5` transform, the subject is Layout B. If it lists a `SMIR.Lower_limb...nrrd`, it's Layout A.
+
+**Before running the inventory**, download the zip and unzip it (approximately 1–2 GB per subject, all on the `D:` drive to preserve C: space):
+
+```bash
+zenodo_get 8302449 -g "zXXX.zip" -o /mnt/d/Femuralabs/D07/temp_zips
+cd /mnt/d/Femuralabs/D07/temp_zips && unzip zXXX.zip
+```
+
+### 3.2 Layout A: Standard lower-limb (e.g., case01, case02, case03)
+
+These subjects ship with a clean full-limb CT (`SMIR.Lower_limb...nrrd`) and two segmentations. The workflow is Slicer export → merge.
+
+**Producing the thighs NIfTI:**
+
+1. In 3D Slicer, `File → Add Data`, open the `SMIR.Lower_limb...nrrd`.
+2. Confirm in `Modules → Volumes → Volume Information` that dimensions are ~512 × 512 × 1500+.
+3. `File → Add Data`, open the `-Pelvis-Thighs_Reconstruction.seg.nrrd`.
+4. **`Modules → Segment Editor`** — not Segmentations. Set the **Source Volume** dropdown to the full-limb CT.
+5. Click the small icon to the right of Source Volume (the **Segment Geometry** dialog). Confirm dimensions match the CT (~512 × 512 × 1637). Click **OK**. This step is mandatory — without it the export is crop-sized.
+6. **`Modules → Segmentations`** — not Segment Editor. Scroll to **"Export to files"**, set format `NIFTI (.nii)`, choose a `D:` destination folder, click **Export**.
+7. Copy the `.nii` and `.labels.csv` to WSL under a fixed name:
+
+```bash
+cp /mnt/d/Femuralabs/D07/exports/caseXX/*Pelvis-Thighs_Reconstruction.nii data/raw/caseXX/thighs_on_full.nii
+cp /mnt/d/Femuralabs/D07/exports/caseXX/*Pelvis-Thighs_Reconstruction.labels.csv data/raw/caseXX/thighs_on_full.labels.csv
+```
+
+**Producing the shanks NIfTI:** repeat steps 3–7 with `-Shanks-Feet_Segmentation.seg.nrrd` (Segmentation, not Reconstruction), saving as `shanks_on_full.nii` / `shanks_on_full.labels.csv`.
+
+**Verify both files are on the same grid:**
+
+```bash
+python -c "
+import SimpleITK as sitk
+a = sitk.ReadImage('data/raw/caseXX/thighs_on_full.nii')
+b = sitk.ReadImage('data/raw/caseXX/shanks_on_full.nii')
+print('thighs:', a.GetSize(), a.GetSpacing())
+print('shanks:', b.GetSize(), b.GetSpacing())
+"
+```
+
+Both must print identical sizes and spacings. If either is crop-sized (`(312, 205, 889)` or similar), the Segment Geometry step was skipped — go back to step 5 for that file.
+
+**Merge into one multi-label file:**
+
+```bash
+PYTHONPATH=src python scripts/data/merge_segmentation.py \
+  --thighs data/raw/caseXX/thighs_on_full.nii \
+  --shanks data/raw/caseXX/shanks_on_full.nii \
+  --out    data/raw/caseXX/combined_seg.nii
+```
+
+The script reads each subject's `.labels.csv` to look up source label values by name (e.g., `Femur_R` → some integer that varies per subject), so it does not assume case01's numbers. It prints each mapping with voxel counts. Expect `Femur_R ~500,000` voxels, `Tibia_R ~300,000`, `Fibula_R ~77,000`. A zero means the CSV was wrong or the export was crop-sized.
+
+**Clean up the intermediates** to save space:
+
+```bash
+rm data/raw/caseXX/thighs_on_full.* data/raw/caseXX/shanks_on_full.*
+```
+
+### 3.3 Layout B: Full-body upside-down (e.g., case04–case08)
+
+These subjects ship a full-body CT (`SMIR.Body...nii`), separate segmentations, and a `Transform-Upside-Down.h5` file. The raw CT is stored feet-first, so the array is upside down. **Do not use Slicer to export these** — Slicer drops the H5 translation when exporting and the geometry breaks.
+
+Instead, one Python script does everything: it reads the H5 transform, extracts the raw leg bounding box from the CT (bypassing OOM), combines the segmentations, and centers the patient at X=0.
+
+```bash
+PYTHONPATH=src python scripts/data/process_full_body_raw.py \
+  --ct /mnt/d/Femuralabs/D07/temp_zips/zXXX/zXXX/SMIR.Body...nii \
+  --thighs-seg /mnt/d/Femuralabs/D07/temp_zips/zXXX/zXXX/...Pelvis-Thighs_Reconstruction.seg.nrrd \
+  --shanks-seg /mnt/d/Femuralabs/D07/temp_zips/zXXX/zXXX/...Shanks-Feet_Segmentation.seg.nrrd \
+  --transform /mnt/d/Femuralabs/D07/temp_zips/zXXX/zXXX/Transform-Upside-Down.h5 \
+  --out-dir data/raw/caseXX
+```
+
+Expected output on `case04`:
+
+```text
+Mapped Femur_R from thighs (idx 1) -> 1 (354465 voxels)
+Mapped Femur_L from thighs (idx 2) -> 2 (347109 voxels)
+Mapped Tibia_R from shanks (idx 1) -> 3 (48372 voxels)
+...
+Final size: (276, 170, 2459)
+```
+
+**Read the log:** each `Mapped` line names the source label value the script found in the CSV (varies per subject), the destination label (fixed by D032), and the voxel count. A zero for `Talus_R` or `Talus_L` means the source data did not annotate that bone — this is common in VSD and the pipeline tolerates it.
+
+### 3.4 Verifying any prepared subject
+
+Whichever layout you used, the output is `data/raw/caseXX/combined_seg.nii` with 8 labels (0 = background, 1–8 = the six main bones plus two talus). Run the standard check:
+
+```bash
+PYTHONPATH=src python -c "
+from femuralabs.toolkit.fileio.volume import load_volume
+from femuralabs.toolkit.imaging.masks import extract_masks
+v = load_volume('data/raw/caseXX/combined_seg.nii')
+m = extract_masks(v)
+print('femur_L x:', m['femur_L'].centroid_world[0])
+print('femur_R x:', m['femur_R'].centroid_world[0])
+"
+```
+
+Expected: `femur_L x` positive, `femur_R x` negative, both roughly symmetric (±90 to ±115 mm depending on subject size). This is the single most important check — if the sides are swapped, every downstream angle is wrong.
+
+**Diagnostic if sides are wrong:**
+- Both positive, or both negative: the centering step failed. Re-run `process_full_body_raw.py` (Layout B) or investigate the direction matrix (Layout A).
+- Only one side wrong: the mask files were mixed up during merge (e.g., `thighs_on_full` was from a different subject). Check with `git status` that no temporary files crossed between case folders.
+
+**Additional check — the mask sits on the bone.** Load `data/raw/caseXX/combined_seg.nii` and `data/raw/caseXX/ct_cropped.nii` (Layout B) into Slicer, set opacity to 0.4, scroll to the knee. The colored mask must sit exactly on the CT bone. If they are offset, the geometry is broken.
+
+---
+
+## 4. Landmark placement
+
+Every subject needs 10 hand-placed landmarks. This is the human reference that later stages compare the automatic rules against. It takes 30–60 minutes per subject.
+
+**Setup in Slicer:**
+
+1. Open Slicer.
+2. `File → Add Data`, load `data/raw/caseXX/ct_cropped.nii` (Layout B) or the full-limb `.nrrd` (Layout A).
+3. `File → Add Data`, load `data/raw/caseXX/combined_seg.nii` as a **Label Map**.
+4. Right-click the label map in the Data module → **"Convert label map to segmentation node"**.
+5. In `Modules → Segmentations → Display`, set opacity to 0.4.
+6. Verify the colored mask overlays the CT bone in the axial, coronal, and sagittal views.
+7. `Ctrl+Shift+F` to create a Markups node. Rename it to `landmarks_caseXX`.
+
+**Place the ten landmarks** following `docs/landmarks.md`. In summary:
+
+| Landmark | Placement |
+|---|---|
+| `femoral_head_R` / `_L` | Axial slice with the largest circular cross-section of the femoral head; center of that circle |
+| `knee_centre_R` / `_L` | Axial at joint line, center of the intercondylar notch |
+| `ankle_centre_R` / `_L` | Coronal at talar dome, midpoint of the two malleoli projected up |
+| `condyle_medial_R` | Coronal at joint line, most distal-medial point of medial femoral condyle |
+| `condyle_lateral_R` | Coronal at joint line, most distal-lateral point of lateral femoral condyle |
+| `plateau_medial_R` | Coronal at joint line, most proximal-medial point of medial tibial plateau |
+| `plateau_lateral_R` | Coronal at joint line, most proximal-lateral point of lateral tibial plateau |
+
+**Two traps:**
+- **Slicer's axial view is radiological.** Patient-right appears on screen-left. `_R` landmarks must be on the screen-LEFT side in axial.
+- **The pipeline uses LPS millimetres.** `load_landmarks` reads the file's `coordinateSystem` field and only negates if it says `"RAS"`. Slicer 5.x writes `"LPS"` by default. Do not manually negate.
+
+**Save:** `File → Save`. Save as `landmarks_caseXX.mrk.json` in `data/ref/`.
+
+**Verify:**
+
+```bash
+PYTHONPATH=src python -c "
+import numpy as np
+from femuralabs.toolkit.fileio.landmark import load_landmarks
+from femuralabs.toolkit.fileio.volume import load_volume
+from femuralabs.toolkit.imaging.masks import extract_masks
+h = load_landmarks('data/ref/landmarks_caseXX.mrk.json')
+v = load_volume('data/raw/caseXX/combined_seg.nii')
+m = extract_masks(v)
+D = np.array(v.direction).reshape(3,3); S = np.array(v.spacing); O = np.array(v.origin)
+def min_dist(pt, mask):
+    zi, yi, xi = np.where(mask)
+    xyz = np.stack([xi, yi, zi], axis=1)
+    return float(np.linalg.norm(O + (xyz * S) @ D.T - pt, axis=1).min())
+for name, bone in [
+    ('femoral_head_R', 'femur_R'), ('femoral_head_L', 'femur_L'),
+    ('knee_centre_R', 'femur_R'), ('knee_centre_L', 'femur_L'),
+    ('ankle_centre_R', 'tibia_R'), ('ankle_centre_L', 'tibia_L'),
+    ('condyle_medial_R', 'femur_R'), ('condyle_lateral_R', 'femur_R'),
+    ('plateau_medial_R', 'tibia_R'), ('plateau_lateral_R', 'tibia_R'),
+]:
+    if name not in h: continue
+    x = h[name][0]
+    side_ok = 'OK' if (('_R' in name and x < 0) or ('_L' in name and x > 0)) else 'WRONG SIDE'
+    print(f'{name:<20} x={x:>7.1f} {side_ok:<10} dist={min_dist(np.array(h[name]), m[bone].mask):.2f} mm')
+"
+```
+
+Expected: every `side_ok` is `OK`, every `dist` is under 3 mm (knee_centre will be ~2.5 mm because it sits in the joint gap, not on bone).
+
+---
+
+## 5. Running the geometric pipeline
+
+The pipeline takes `combined_seg.nii` plus optional landmarks and produces a `summary.json` with mesh statistics, volumes, and alignment angles. It runs in 20–60 seconds per case.
+
+### 5.1 Single case
+
+```bash
+PYTHONPATH=src python scripts/pipeline/pipeline_demo.py \
+  --case data/raw/caseXX/combined_seg.nii \
+  --out output/caseXX \
+  --compare data/ref/landmarks_caseXX.mrk.json \
+  --angles
+```
+
+Expected output on any case:
+
+```text
+Loading volume: data/raw/caseXX/combined_seg.nii
+  Extracting and meshing: femur_R...
+  Extracting and meshing: femur_L...
+  ... (eight bones)
+  Comparing against: data/ref/landmarks_caseXX.mrk.json
+  Computing angles...
+Wrote output/caseXX/summary.json
+```
+
+The `--compare` and `--angles` flags are optional. Without them, only mesh stats and volumes are computed. With them, the summary also contains `landmarks` (auto vs hand error per landmark) and `angles` (HKA, MAD, mLDFA, MPTA per side).
+
+**Memory note:** the pipeline processes one bone at a time and calls `gc.collect()` between, keeping peak memory at ~3 GB even on the largest subject. This is a D038 decision; do not "optimize" it back to loading all masks at once.
+
+### 5.2 All cases
+
+Once every subject under `data/raw/` has a `combined_seg.nii` and a `landmarks_caseXX.mrk.json`, run:
+
+```bash
+PYTHONPATH=src python scripts/pipeline/run_all_cases.py
+```
+
+The script iterates `CASES = ["case01", ..., "case08"]` (edit this list if you have more or fewer). It calls `pipeline_demo.py` with `--compare` and `--angles` for each case, writing `output/caseXX/summary.json`.
+
+---
+
+## 6. Generating reports
+
+The reports are generated from the JSON summaries, never hand-typed. This is a D039 decision: manual transcription eventually drifts from the data.
+
+```bash
+python scripts/pipeline/make_report_tables.py
+```
+
+Writes:
+- `reports/landmark_errors.md` — per-case, per-landmark error table with means
+- `reports/angles_case.md` — HKA / mLDFA / MPTA comparison with bias and limits of agreement
+- `reports/segmentation_errors.md` — Dice and HD95 per case per bone (requires `reports/seg_results_caseXX.json` from TotalSegmentator, see §7)
+
+**Rule:** after any pipeline run that changes a `summary.json`, re-run this script. Do not edit the markdown files by hand.
+
+---
+
+## 7. Second method: TotalSegmentator
+
+We compare the human reference masks against TotalSegmentator v2.18.0, a pretrained nnU-Net model. This section documents the run on limited hardware (7.7 GB usable RAM); on a machine with 32+ GB RAM you can skip most of it.
+
+### 7.1 Installation
+
+```bash
+pip install TotalSegmentator
+totalseg_set_license -l <academic_license_number>
+```
+
+The license is free for academic use. Never commit it — `git grep` must return nothing for the number.
+
+### 7.2 The RAM trap
+
+TotalSegmentator's prediction step is memory-light (it slides a window over the volume), but the final **resampling step** allocates a tensor for all 117 classes at full resolution. On a 512×512×1637 CT, that allocation is roughly 200 GB. On 7.7 GB RAM the OS kills the process with `SIGKILL: 9`.
+
+**What we tried and what failed:**
+- `--fast`, `--fastest`: still OOM at resample.
+- `--force_split`, `--body_seg`: split the prediction, but resample still spikes.
+- `--nr_thr_saving 1`: helps the save step, not the resample.
+
+**The working solution:** run TotalSegmentator on a tightly cropped CT, then paste the mask back. See §7.3.
+
+### 7.3 Running on limited RAM
+
+The wrapper script handles everything:
+
+```bash
+PYTHONPATH=src python scripts/data/run_totalseg_all.py
+```
+
+For each case in `CASES = ["case01", "case02", "case03"]`, it:
+1. Crops the CT to the reference mask bounding box (using `combined_seg.nii`).
+2. Runs TotalSegmentator on the small crop.
+3. Waits for the OOM-killed parent to be replaced by the detached child, which saves the mask to disk.
+4. Pastes the cropped mask back onto the full 512×512×1637 grid.
+
+If you want to run a single case manually:
+
+```bash
+PYTHONPATH=src python scripts/data/totalseg_bbox_crop.py \
+  --ct data/raw/caseXX/caseXX_ct.nii.gz \
+  --ref data/raw/caseXX/combined_seg.nii \
+  --out output/totalseg/caseXX \
+  --task total
+# If killed, then:
+python scripts/data/paste_back.py \
+  --seg output/totalseg/caseXX/totalseg_cropped.nii \
+  --ref-ct data/raw/caseXX/caseXX_ct.nii.gz \
+  --out output/totalseg/caseXX/segmentation_full.nii.gz
+```
+
+### 7.4 Comparing segmentations
+
+Once both tasks (`total` for femurs, `appendicular_bones` for tibias/fibulas) have produced full-size masks:
+
+```bash
+PYTHONPATH=src python scripts/pipeline/compare_segmentations.py \
+  --ref data/raw/caseXX/combined_seg.nii \
+  --ts-total output/totalseg/caseXX/segmentation_femurs.nii.gz \
+  --ts-app output/totalseg/caseXX_appendicular/segmentation_full.nii.gz \
+  --out reports/seg_results_caseXX.json
+```
+
+The script maps TotalSegmentator's label IDs to bone names dynamically (v2.18.0 uses 75/76 for femurs, 2/3 for tibia/fibula which must be split at the midline — see D041). It prints a Dice/HD95 table.
+
+**Expected on case01:**
+
+```text
+femur_R    | 0.709  |     6.92
+femur_L    | 0.674  |     6.54
+tibia_R    | 0.670  |     5.90
+tibia_L    | 0.632  |     5.12
+fibula_R   | 0.739  |     2.80
+fibula_L   | 0.724  |     2.80
+```
+
+The 3 mm downsampling means Dice caps around 0.75 on this cohort; native resolution runs would push it higher. This is documented as a limitation in `reports/validation.md`.
+
+---
+
+## 8. Docker container
+
+The container packages the geometry pipeline and runs it on a synthetic 8-bone volume, so anyone can verify the build without downloading real data.
+
+### 8.1 Build
+
+```bash
+docker build -t femuralabs-tool .
+```
+
+~2 minutes on first build (downloads scipy etc.), seconds on rebuild. Installs numpy, SimpleITK, scikit-image, scipy — **not** PyTorch or TotalSegmentator.
+
+### 8.2 Run
+
+```bash
+docker run --rm femuralabs-tool
+```
 
 Expected:
 
-    shape: (2, 3)
-    dtype: float32
-    min: 0.00
-    max: 5.00
-    mean: 2.50
+```text
+Generated synthetic case at /tmp/synthetic_case/combined_seg.nii
+Running pipeline...
+Loading volume: /tmp/synthetic_case/combined_seg.nii
+  Extracting and meshing: femur_R...
+  ... (eight bones)
+Wrote /tmp/output/summary.json
+```
 
-The six numbers 0–5 sum to 15, so a mean of 2.50 is checkable by hand
-without trusting the tool.
+The container runs as `student` (UID 1000, non-root). All files are in `/tmp`, nothing is written to the host.
 
-If the command fails with `ModuleNotFoundError: No module named
-'femuralabs'`, `PYTHONPATH=src` was omitted. If it fails with
-`FileNotFoundError`, `data/small.npy` was not created — re-run the second
-line from the project root.
+### 8.3 Mount real data read-only
 
+To run against a real subject without baking it into the image:
 
-## Training the small CNN
+```bash
+mkdir -p output
+docker run --rm \
+  -v "$(pwd)/data:/data:ro" \
+  -v "$(pwd)/output:/output" \
+  femuralabs-tool \
+  python scripts/pipeline/pipeline_demo.py \
+    --case /data/raw/case01/combined_seg.nii \
+    --out /output/case01
+```
 
-Trains `SmallCNN` on MNIST for a few epochs. First run downloads the MNIST
-data into `data/` (a few MB). Each run writes one folder under `runs/`,
-named by `--run-name`, containing `config.json`, `environment.json`,
-`metrics.csv` and `best.pt`.
+`/data` is read-only (enforced by Docker), `/output` is writable. Create `output/` on the host **as your user** before running — Docker creates missing mount folders as root, which the container's `student` user cannot write to.
 
-    PYTHONPATH=src python scripts/train_small_cnn.py \
-        --seed 0 --epochs 5 \
-        --run-name run_a_s0 \
-        --commit "$(git describe --always --dirty)"
+---
 
-Expected: one line per epoch with training loss, validation loss and
-accuracy, then a PNG in `reports/run_a_s0_curves.png`.
+## 9. HTTP service and Compose
 
-The `$(...)` runs `git describe` before the script starts, so
-`config.json` records the exact commit. A `-dirty` suffix in the hash is a
-warning: the run was started from an uncommitted tree, and the recorded
-commit is not the code that actually ran.
+The repo ships a small HTTP service that serves `/health` and `/info`. It is not used by the geometric pipeline but is included as a demonstration of a deployment target.
 
-`environment.json` is written by `train_utils.environment_record()`. It
-records Python, numpy, torch and torchvision versions, the OS, CPU count
-and (when a GPU is used) the GPU name. If a future run gives different
-numbers, comparing the two `environment.json` files shows whether a
-package update is the cause.
+### 9.1 Run standalone
 
-Do not reuse a run name; `runs/<name>/` is overwritten. For three seeds of
-one variant, use `run_a_s0`, `run_a_s1`, `run_a_s2`.
-
-On Windows PowerShell, replace `PYTHONPATH=src python` with a separate
-line `$env:PYTHONPATH = "src"` before the `python` call, and replace
-`"$(git describe ...)"` with `(git describe --always --dirty)`.
-
-
-## Building the tool container
-
-Builds the `femuralabs-tool` image. The image installs the geometry dependencies (SimpleITK, scikit-image, scipy) and runs the full pipeline on a synthetic 8-bone volume.
-
-    docker build -t femuralabs-tool .
-
-**What to expect:** The build takes about 2 minutes (mostly downloading and installing scipy). 
-
-## Running the tool container
-
-    docker run --rm femuralabs-tool
-
-Expected output:
-
-    Generated synthetic case at /tmp/synthetic_case/combined_seg.nii
-    Running pipeline...
-    Loading volume: /tmp/synthetic_case/combined_seg.nii
-      Extracting and meshing: femur_R...
-      Extracting and meshing: femur_L...
-      Extracting and meshing: tibia_R...
-      Extracting and meshing: tibia_L...
-      Extracting and meshing: fibula_R...
-      Extracting and meshing: fibula_L...
-      Extracting and meshing: talus_R...
-      Extracting and meshing: talus_L...
-    Wrote /tmp/output/summary.json
-
-The container runs as the non-root `student` user and generates all meshes in `/tmp`. No real CT data is required, and no data is written to the host.
-
-## Running the tool container
-
-    docker run --rm toolkit-hello
+```bash
+PYTHONPATH=src python -m femuralabs.toolkit.service.serve
+# In a second terminal:
+curl http://localhost:8000/health
+curl http://localhost:8000/info
+```
 
 Expected:
 
-    shape (z, y, x): (4, 6, 6)
-    spacing (mm): (2.0, 1.0, 1.0)
-    dtype: float32
-    extent (mm): (8.0, 6.0, 6.0)
+```text
+{"status": "ok"}
+{"shape": [4, 6, 6], "spacing": [2.0, 1.0, 1.0], "dtype": "float32", "extent_mm": [8.0, 6.0, 6.0]}
+```
+
+The bind address must be `0.0.0.0` (so Docker-published ports can reach it). `127.0.0.1` will refuse connections from the host.
+
+### 9.2 Compose stack
+
+`docker-compose.yml` runs `api` (built from the Dockerfile) and `web` (a static `http.server`) on a shared network.
+
+```bash
+mkdir -p output web
+docker compose up --build -d
+docker compose ps                                    # both running
+curl http://localhost:8000/health                    # api on 8000
+curl -I http://localhost:8080/                       # web on 8080
+docker compose exec web python -c "import urllib.request; print(urllib.request.urlopen('http://api:8000/health').read())"
+docker compose down
+```
+
+The `exec` test proves the two services resolve each other by name (`http://api:8000`) — the names only work on the private network.
+
+**Failure modes:**
+- `no configuration file provided`: you're not in the folder with `docker-compose.yml`.
+- `port is already allocated`: another process holds 8000 or 8080. `docker compose ps` shows leftovers.
+- `Permission denied` writing to `/output`: the host folder is owned by root. `rm -rf output && mkdir -p output`.
+
+---
+
+## Appendix A: Diagnostic scripts
+
+Use these any time you suspect a subject is broken, before touching the main pipeline.
+
+### A.1 Verify mask sides and volumes
+
+After `merge_segmentation.py` or `process_full_body_raw.py`:
+
+```bash
+PYTHONPATH=src python -c "
+from femuralabs.toolkit.fileio.volume import load_volume
+from femuralabs.toolkit.imaging.masks import extract_masks
+v = load_volume('data/raw/caseXX/combined_seg.nii')
+m = extract_masks(v)
+for name, b in m.items():
+    print(f'{name:<9} {b.voxel_count:>8} {b.volume_ml:>7.1f} mL  x={b.centroid_world[0]:>7.1f}')
+print('femur OK' if m['femur_L'].centroid_world[0] > m['femur_R'].centroid_world[0] else 'FEMUR SWAPPED')
+"
+```
+
+### A.2 Verify a mesh
+
+Confirms `boundary = 0` (mesh is closed), `non_manifold` fraction is under 0.1%, and mesh volume matches voxel volume within 10%:
+
+```bash
+PYTHONPATH=src python -c "
+from femuralabs.toolkit.fileio.volume import load_volume
+from femuralabs.toolkit.imaging.masks import extract_masks
+from femuralabs.toolkit.imaging.mesh import mask_to_mesh, signed_volume, edge_incidence
+v = load_volume('data/raw/caseXX/combined_seg.nii')
+m = extract_masks(v)['femur_R']
+verts, faces = mask_to_mesh(m.mask, v.spacing, v.origin, v.direction)
+counts = edge_incidence(verts, faces)
+print('boundary edges:', counts['boundary'])
+print('non-manifold edges:', counts['non_manifold'])
+print('mesh volume (mm^3):', round(abs(signed_volume(verts, faces)), 1))
+print('voxel volume (mm^3):', round(m.volume_ml * 1000, 1))
+"
+```
+
+### A.3 Femoral head fit diagnostic
 
-Any words after the image name replace the container's default command
-completely. Three examples:
+Checks the automatic rule against the hand click and prints the fit radius (which should be 17–25 mm for an adult head):
 
-    # different shape and spacing
-    docker run --rm toolkit-hello python -m femuralabs.toolkit.cli --shape 3 5 5 --spacing 1.5 1.5 1.5
+```bash
+PYTHONPATH=src python -c "
+import numpy as np
+from femuralabs.toolkit.fileio.volume import load_volume
+from femuralabs.toolkit.imaging.masks import extract_masks
+from femuralabs.toolkit.imaging.mesh import mask_to_mesh
+from femuralabs.toolkit.geometry.landmarks import femoral_head_centre
+from femuralabs.toolkit.fileio.landmark import load_landmarks
+v = load_volume('data/raw/caseXX/combined_seg.nii')
+m = extract_masks(v); h = load_landmarks('data/ref/landmarks_caseXX.mrk.json')
+for side in ('R', 'L'):
+    verts, _ = mask_to_mesh(m[f'femur_{side}'].mask, v.spacing, v.origin, v.direction)
+    centre, radius, rms = femoral_head_centre(verts)
+    ref = np.array(h[f'femoral_head_{side}'])
+    print(f'femur_{side}: err {np.linalg.norm(centre-ref):.2f} mm, radius {radius:.1f} mm')
+"
+```
+
+A radius over 28 mm or an error over 15 mm means either the medial window is wrong (see `docs/landmarks.md`) or the mask is broken (e.g., metal artifacts, see `docs/data.md` "Traps").
+
+### A.4 Ankle fit diagnostic
+
+```bash
+PYTHONPATH=src python -c "
+import numpy as np
+from femuralabs.toolkit.fileio.volume import load_volume
+from femuralabs.toolkit.imaging.masks import extract_masks
+from femuralabs.toolkit.imaging.mesh import mask_to_mesh
+from femuralabs.toolkit.geometry.landmarks import ankle_centre
+from femuralabs.toolkit.fileio.landmark import load_landmarks
+v = load_volume('data/raw/caseXX/combined_seg.nii')
+m = extract_masks(v); h = load_landmarks('data/ref/landmarks_caseXX.mrk.json')
+for side in ('R', 'L'):
+    tv, _ = mask_to_mesh(m[f'tibia_{side}'].mask, v.spacing, v.origin, v.direction)
+    fv, _ = mask_to_mesh(m[f'fibula_{side}'].mask, v.spacing, v.origin, v.direction)
+    centre, info = ankle_centre(tv, fv)
+    ref = np.array(h[f'ankle_centre_{side}'])
+    print(f'ankle_{side}: err {np.linalg.norm(centre-ref):.2f} mm, plafond_z {info[\"plafond_z\"]:.1f}')
+"
+```
 
-    # which account does the container use?
-    docker run --rm toolkit-hello id
-    # expected: uid=1000(student) gid=1000(student) groups=1000(student)
+An error over 8 mm or a `plafond_z` within 3 mm of the tibia bottom means the search window found the malleolar tip, not the plafond.
 
-    # start the service on host port 8000
-    docker run --rm -p 8000:8000 toolkit-hello python -m femuralabs.toolkit.service.serve
-    # in a second terminal:  curl http://localhost:8000/health
+---
 
-`--rm` deletes the container when it stops; without it, stopped containers
-accumulate and `docker ps -a` lists them. `-p 8000:8000` forwards host
-port 8000 to container port 8000 (host:container order). If it errors with
-`port is already allocated`, another program holds 8000 — publish to
-`-p 8001:8000` and `curl :8001` instead.
+## Appendix B: Flow diagrams
 
+Each time module flow changes, add a diagram. Old sections are never edited — `docs/FLOW.md` is append-only.
 
-## Mounting data in and results out
+```bash
+python scripts/dev/draw_flow.py \
+  --slug <short-slug> \
+  --title "<heading>" \
+  --description "<2-4 sentences>" \
+  --spec - <<'EOF'
+{ "nodes": [...], "edges": [...] }
+EOF
+```
 
-The container reads a host folder marked read-only and writes results to a
-second host folder. The image holds neither folder; both live on the host.
+The command prepends a section above the `<!-- INSERT HERE -->` marker in `docs/FLOW.md`. The PNG goes to `docs/flow/<slug>.png`. Re-running with an existing slug exits non-zero; to regenerate, delete both the section and the PNG first.
 
-Create the input volume by calling the shared `make_volume` — the same
-function used by `hello_pipeline.py` and the CLI's `--shape` path:
+---
 
-    PYTHONPATH=src python -c 'import numpy as np; from femuralabs.toolkit.volume_info import make_volume; v, _ = make_volume((2,3,4), (3.0,1.0,1.0)); np.save("data/volume.npy", v)'
+## Appendix C: Adding a new stage
 
-Create the output folder as the host user before the container starts.
-Docker creates a missing bind-mount folder as `root`; a pre-created folder
-belongs to the host user (UID 1000 by default in WSL2), matching the
-container's `student` account:
+When you add a new pipeline stage, add a section to this runbook with four parts:
 
-    mkdir -p output
-    ls -la output                # owner should be your host user
+1. **What it does**, one sentence.
+2. **The commands**, as a code block.
+3. **The expected output**, as a code block, so a reader can diff.
+4. **Failure modes**, as a bullet list naming the symptom and its cause.
 
-Run with two mounts — data read-only, output writable:
+**Do not add a command that has not been run and verified.** An unrun command is a guess dressed as documentation. If a step depends on GUI clicks you have not actually performed, do not write it — the runbook's value comes from being accurate for the hardware and software versions in `environment.json`.
 
-    docker run --rm \
-      -v "$(pwd)/data:/data:ro" \
-      -v "$(pwd)/output:/output" \
-      toolkit-hello \
-      python -m femuralabs.toolkit.cli \
-        --file /data/volume.npy \
-        --spacing 3 1 1 \
-        --out /output
+---
 
-Expected:
+## Appendix D: Verifying a clean checkout
 
-    shape (z, y, x): (2, 3, 4)
-    spacing (mm): (3.0, 1.0, 1.0)
-    dtype: float32
-    extent (mm): (6.0, 3.0, 4.0)
-    wrote: /output/info.json
+Proves that the files tracked by git reproduce the project. Clones into `/tmp`, runs pytest, runs the CLI, builds the image, runs the container, checks the output.
 
-The `wrote:` line names the **container** path. The host file is:
+```bash
+bash scripts/dev/clean_check.sh
+```
 
-    cat output/info.json
-    ls -la output/               # owner should be your host user, not root
+Expected: `pytest -q` passes, the geometry lines print twice (host and container), and the script ends with `clean checkout: all checks passed`.
 
-Read-only is enforced — attempting to write into `/data` fails:
+Run this before trusting a commit. If a file exists in your working tree but was never committed, this script will not see it — that is the point.
 
-    docker run --rm -v "$(pwd)/data:/data:ro" toolkit-hello \
-      python -c "open('/data/test.txt', 'w').write('x')"
-    # OSError: [Errno 30] Read-only file system
+---
 
-A mount hides what the image holds at the mount path:
+## Appendix E: Old manual merge (deprecated)
 
-    docker run --rm -v "$(pwd)/data:/app/src:ro" toolkit-hello \
-      python -m femuralabs.toolkit.cli
-    # No module named 'femuralabs'
+Before `merge_segmentation.py` existed, the merge was done by hand-copying the Slicer snippets. This appendix preserves the procedure for historical reference and for the rare case where a subject's `.labels.csv` is missing or corrupted.
 
-Failure modes:
+The old snippet hardcoded case01's label values (5, 6, 2, 9, 3, 10). **Do not use it** on any other subject; the label values vary. `merge_segmentation.py` reads the CSV and does this automatically.
 
-- `No such file or directory: /data/volume.npy` — the host path in the
-  flag was wrong; Docker silently created an empty folder there.
-- `Permission denied` on `/output` — the host folder is owned by root, not
-  UID 1000. `rm -rf output && mkdir -p output` before the run.
-- `Read-only file system` on `/output` — `--out` points into `/data`. Use
-  `/output` for `--out`.
-- `No module named 'femuralabs'` — a mount overlaps `/app/src` or `/app`,
-  hiding the code. Use `/data` and `/output`.
+If you must do the merge manually, use the Slicer export procedure from §3.2 to produce `thighs_on_full.nii` and `shanks_on_full.nii`, then:
 
-`output/` and `data/` are ignored by git.
+```python
+import numpy as np, SimpleITK as sitk
+t = sitk.GetArrayFromImage(sitk.ReadImage('thighs_on_full.nii'))
+s = sitk.GetArrayFromImage(sitk.ReadImage('shanks_on_full.nii'))
+merged = np.zeros_like(t, dtype=np.uint8)
+merged[t == <femur_R_source>] = 1
+merged[t == <femur_L_source>] = 2
+merged[s == <tibia_R_source>] = 3
+merged[s == <tibia_L_source>] = 4
+merged[s == <fibula_R_source>] = 5
+merged[s == <fibula_L_source>] = 6
+out = sitk.GetImageFromArray(merged)
+out.CopyInformation(thighs)  # NOT optional
+sitk.WriteImage(out, 'combined_seg.nii')
+```
 
+The `<..._source>` values come from the subject's `.labels.csv` (Slicer writes one next to each export). Getting any of them wrong produces a silent, wrong `combined_seg.nii` — which is why `merge_segmentation.py` exists.
 
-## Running both services with Compose
-
-Starts the API and the static web page together on one private network
-with one command. Both are published on the host, so a browser and `curl`
-reach them by port.
-
-Before the first start:
-
-    mkdir -p web output
-    docker compose config
-
-`config` validates the file and prints it with every default filled in. If
-the output is a YAML parse error naming a line and column, there is a tab
-or a wrong indent — YAML forbids tabs.
-
-Start, inspect, request, stop:
-
-    docker compose up --build -d
-    docker compose ps
-    curl http://localhost:8000/health
-    curl http://localhost:8000/info
-    curl -I http://localhost:8080/
-    docker compose logs api
-    docker compose down
-
-Expected:
-
-- `up` creates the network `femuralabs_default` and starts `api` and `web`.
-- `ps` lists both, each with `0.0.0.0:8000->8000/tcp` and
-  `0.0.0.0:8080->8080/tcp`.
-- `curl` on port 8000 `/health` gives `{"status": "ok"}`.
-- `curl` on port 8000 `/info` gives the content of `output/info.json` if
-  it exists, or the four-key geometry dictionary if not.
-- `curl -I` on port 8080 gives `HTTP/1.0 200 OK` and a `Content-type:
-  text/html` header.
-- `logs api` shows `serving on 0.0.0.0:8000`.
-- `down` removes both containers and the network. `output/` and `web/`
-  survive — they are bind mounts on the host.
-
-Recreate the report if `/info` returns the fallback shape `(4, 6, 6)`
-rather than the report's shape — `output/info.json` is missing:
-
-    PYTHONPATH=src python -m femuralabs.toolkit.cli --shape 2 3 4 --spacing 3 1 1 --out output
-
-Test the Compose network — services reach each other by name:
-
-    docker compose up -d
-    docker compose exec web python -c "import urllib.request; print(urllib.request.urlopen('http://api:8000/health').read())"
-    docker compose down
-
-Expected: `b'{"status": "ok"}'` — `web` reached `api` by service name, not
-by IP. The service name only resolves on the Compose network; from the
-workstation, use the published ports.
-
-Common failures:
-
-- `no configuration file provided: not found` — the terminal is not in the
-  folder holding `docker-compose.yml`.
-- `port is already allocated` — another program holds 8000 or 8080.
-  `docker compose ps` shows leftovers; `docker compose down` removes them.
-
-
-## Running the geometry service
-
-Starts a small HTTP service that answers two JSON routes. No Docker needed.
-
-    PYTHONPATH=src python -m femuralabs.toolkit.service.serve
-    # prints: serving on 0.0.0.0:8000
-
-In a second terminal:
-
-    curl http://localhost:8000/health
-    curl http://localhost:8000/info
-    curl -i http://localhost:8000/missing
-
-Expected:
-
-    {"status": "ok"}
-    {"shape": [4, 6, 6], "spacing": [2.0, 1.0, 1.0], "dtype": "float32", "extent_mm": [8.0, 6.0, 6.0]}
-    HTTP/1.0 404 Not Found
-    {"error": "not found"}
-
-Stop the server with `Ctrl+C`. The bind address must be `0.0.0.0`: if it is
-`127.0.0.1`, `curl` on the workstation hangs or is refused.
-
-Without `curl`, the demo script does the same three requests against a
-random free port:
-
-    PYTHONPATH=src python scripts/api_demo.py
-
-The `/info` route can serve a written report instead of the computed
-default. Set `REPORT_FOLDER` and put an `info.json` in that folder:
-
-    PYTHONPATH=src python -m femuralabs.toolkit.cli --shape 2 3 4 --spacing 3 1 1 --out output
-    REPORT_FOLDER=output PYTHONPATH=src python -m femuralabs.toolkit.service.serve
-    # in a second terminal:
-    curl http://localhost:8000/info
-
-Without `REPORT_FOLDER`, or when the folder does not hold `info.json`,
-`/info` falls back to the four-key geometry dictionary. Both cases exit
-200 and are covered by `tests/test_routes.py`.
-
-
-## Recording a flow diagram
-
-Each change that alters the module flow gets a diagram in `docs/FLOW.md`.
-The section is prepended above the marker `<!-- INSERT HERE -->`; old
-sections are never edited or removed. The command is the same every time —
-only `--slug`, `--title`, `--description` and the JSON spec change:
-
-    python scripts/draw_flow.py \
-      --slug <short-semantic-slug> \
-      --title "<human-readable heading>" \
-      --description "<2-4 sentences>" \
-      --spec - <<'EOF'
-    {
-      "nodes": [ ... ],
-      "edges": [ ... ]
-    }
-    EOF
-
-Expected: two printed lines, `wrote docs/flow/<slug>.png` and
-`prepended section '<slug>' to docs/FLOW.md`. Open `docs/FLOW.md` and
-confirm the new section is at the top, above any older section, with the
-`<img src="flow/<slug>.png" ...>` attribute **relative to `docs/`**.
-
-`--slug` values are semantic (`write-info-out-flag`,
-`mounts-readonly-data-writable-output`), never a chapter, block, session
-or date reference. Node kinds map to colours: `module` (blue),
-`script` (green), `cli` (yellow), `file` (white-dashed), `external` (grey).
-
-Re-running with an existing `--slug` exits non-zero. To regenerate, delete
-the section from `FLOW.md`, delete the PNG, and re-run.
-
-
-## Adding a new stage
-
-When a new command has been run successfully on the workstation and its
-output verified, add a section to this file with four parts:
-
-1. **What it does**, in one sentence.
-2. **The commands**, as a code block, no prompts inside the block.
-3. **The expected output**, as a code block, so the reader can diff.
-4. **What a failure means**, as a list of common failure modes and their
-   cause.
-
-Do not add a command that has not been run and verified. An unrun command
-is a guess dressed as documentation.
-
-## Alignment angles on a synthetic limb
-
-Two scalar functions, no I/O, no file required. Prints the HKA
-deviation in degrees and the MAD in millimetres for four synthetic
-limbs — a straight one, a varus bend, a valgus bend, and the
-sprint-doc's small-bend example. All numbers are hand-computable in
-under a minute, which is what makes this the D10 pass test.
-
-    PYTHONPATH=src python -c "
-    from femuralabs.toolkit.geometry.alignment import hka_deviation, mad, knee_error_to_angle_deg
-    def show(name, H, K, A):
-        print(f'{name}: hka={hka_deviation(H,K,A):+7.3f}  mad={mad(H,K,A):+7.3f}')
-    show('straight R ', (-100,0,0), (-100,0,-420), (-100,0,-820))
-    show('varus R    ', (-100,0,0), (-120,0,-420), (-100,0,-820))
-    show('varus L    ', ( 100,0,0), ( 120,0,-420), ( 100,0,-820))
-    show('valgus R   ', (-100,0,0), ( -80,0,-420), (-100,0,-820))
-    print('error prop 2mm / 420mm:', knee_error_to_angle_deg(2, 420), 'deg')
-    "
-
-Expected:
-
-    straight R : hka= +0.000  mad= +0.000
-    varus R    : hka= +5.589  mad=+20.000
-    varus L    : hka= +5.589  mad=+20.000
-    valgus R   : hka= -5.589  mad=-20.000
-    error prop 2mm / 420mm: 0.2727... deg
-
-Read as: **varus on the right and varus on the left are the same
-positive number**, because the side is detected from hip.x sign. If
-varus R and varus L disagree in sign, the side detector is broken;
-the test `test_bent_limb_varus_is_positive_both_sides` catches it.
-
-Straight-limb zero is the baseline. Any non-zero there means a bug in
-the signed-lateral calculation, not a rounding artefact.
-
-`tests/test_alignment.py` pins all four numbers plus the helper. Run
-`pytest tests/test_alignment.py -v` for the actual verification; the
-command above is for inspection.
-
-## Joint-line angles (mLDFA, MPTA)
-
-Measures the angle between the mechanical axis and the joint line.
-Both return the acute angle (≤ 90°), per D037.
-
-    PYTHONPATH=src python -c "
-    import numpy as np
-    from femuralabs.toolkit.fileio.landmark import load_landmarks
-    from femuralabs.toolkit.geometry.alignment import hka_deviation, mldfa, mpta
-    h = load_landmarks('data/ref/landmarks_case02.mrk.json')
-    hip, knee, ankle = np.array(h['femoral_head_R']), np.array(h['knee_centre_R']), np.array(h['ankle_centre_R'])
-    c_med, c_lat = np.array(h['condyle_medial_R']), np.array(h['condyle_lateral_R'])
-    p_med, p_lat = np.array(h['plateau_medial_R']), np.array(h['plateau_lateral_R'])
-    print('HKA  :', round(hka_deviation(hip, knee, ankle), 2))
-    print('mLDFA:', round(mldfa(hip, knee, c_med, c_lat), 2))
-    print('MPTA :', round(mpta(knee, ankle, p_med, p_lat), 2))
-    "
-
-Expected on case02 R:
-    HKA  : -1.39
-    mLDFA: 86.75
-    MPTA : 87.23
-
-The acute-angle convention (`min(angle, 180 - angle)`) is required
-because the joint line is a line, not a ray. A varus knee will produce
-an MPTA below 87 (e.g., case01 R at 71.3). A valgus or neutral knee
-will sit closer to 87–90.
-
-### Run all four alignment metrics on one case
-
-    PYTHONPATH=src python -c "
-    import numpy as np
-    from femuralabs.toolkit.fileio.landmark import load_landmarks
-    from femuralabs.toolkit.geometry.alignment import hka_deviation, mad, mldfa, mpta
-
-    h = load_landmarks('data/ref/landmarks_case02.mrk.json')
-    for side in ('R', 'L'):
-        if f'condyle_medial_{side}' not in h: continue
-        hip = np.array(h[f'femoral_head_{side}']); knee = np.array(h[f'knee_centre_{side}']); ankle = np.array(h[f'ankle_centre_{side}'])
-        c_med = np.array(h[f'condyle_medial_{side}']); c_lat = np.array(h[f'condyle_lateral_{side}'])
-        p_med = np.array(h[f'plateau_medial_{side}']); p_lat = np.array([f'plateau_lateral_{side}'])
-        print(f'Side {side}: HKA={hka_deviation(hip, knee, ankle):+.2f} MAD={mad(hip, knee, ankle):+.2f} mLDFA={mldfa(hip, knee, c_med, c_lat):.2f} MPTA={mpta(knee, ankle, p_med, p_lat):.2f}')
-    "
-
-## Verifying a clean checkout
-
-Proves that the files tracked by git are enough to reproduce the project.
-Clones into a temporary folder, runs the test suite, runs the CLI, builds
-the image, runs it, and checks the output. Cleans up the clone on exit.
-
-From project root, with the virtual environment active:
-
-    bash scripts/clean_check.sh
-
-Expected: `pytest -q` passes, the four geometry lines are printed twice
-(once from the host Python, once from inside the container), and the script
-ends with:
-
-    clean checkout: all checks passed
-
-Run this before trusting any commit: a file that exists in your working
-tree but was never committed is invisible here. That is the point.
-
-
-## Writing a geometry result to a folder
-
-The `--out` flag writes `info.json` inside the named folder. Uses the
-synthetic-volume path from the CLI section, so no input file is needed:
-
-    PYTHONPATH=src python -m femuralabs.toolkit.cli --shape 2 3 4 --spacing 3 1 1 --out output
-    cat output/info.json
-
-Expected:
-
-    shape (z, y, x): (2, 3, 4)
-    spacing (mm): (3.0, 1.0, 1.0)
-    dtype: float32
-    extent (mm): (6.0, 3.0, 4.0)
-    wrote: output/info.json
-    {"shape": [2, 3, 4], "spacing": [3.0, 1.0, 1.0], "dtype": "float32", "extent_mm": [6.0, 3.0, 4.0]}
-
-The extent 6.0, 3.0, 4.0 is 2×3, 3×1, 4×1 — voxel count times voxel
-spacing, checkable by hand.
-
-Omitting `--out` prints the four lines and writes nothing. The folder is
-created if missing and left unchanged if present.
-
-`output/` and `data/` are both ignored by git; nothing under them is
-committed.
-
-
-## Combining the two reference segmentations
-
-The dataset ships femur and tibia on two separate crop volumes. The
-pipeline reads one multi-label NIfTI on the full-limb grid. This section
-records the exact procedure that produced `combined_seg.nii` on case 01,
-on 27 October 2026, in 3D Slicer 5.12.4. It takes about 15 minutes per
-subject by hand; a Python script replaces most of it in a later task, and
-the manual procedure stays as the reference for verifying the script's
-output.
-
-The segmentations to combine are:
-- `...-Pelvis-Thighs_Reconstruction.seg.nrrd` (contains femur, hip,
-  sacrum, patella).
-- `...-Shanks-Feet_Segmentation.seg.nrrd` (contains tibia, fibula, and
-  foot bones).
-
-The full-limb volume is `SMIR.Lower_limb.051Y.F.CT.168_1/CT.168.nrrd`,
-512 × 512 × 1637 voxels. Do **not** use the two crop volumes
-(`...-Pelvis-Thighs.nrrd`, `...-Shanks-Feet.nrrd`) — they are smaller and
-do not reach the ankle.
-
-### Producing the thighs NIfTI
-
-1. In 3D Slicer, `File → Add Data` and open
-   `SMIR.Lower_limb.051Y.F.CT.168_1/CT.168.nrrd`. Confirm in
-   `Modules → Volumes → Volume Information` that `Image Dimensions` reads
-   512, 512, 1637.
-2. `File → Add Data` and open the `_Reconstruction.seg.nrrd` (or `_Segmentation.seg.nrrd` for shanks) file.
-3. Go to `Modules → Segment Editor`.
-4. **Crucial step:** In the Segment Editor panel, set the **Source volume** to the full-limb CT volume.
-5. Click the small icon next to the Source volume dropdown (the **"Segment geometry"** dialog). Confirm the dimensions and spacing match the full CT volume (e.g., 512 x 512 x 3273). Click **OK**.
-6. In `Modules → Segmentations`, scroll to the **"Export to files"** section.
-   - **File format**: `NIFTI (.nii)`.
-   - **Destination folder**: any folder on the `D:` drive (e.g., `D:\Femuralabs\D07\exports\case04`).
-   - Click **Export**.
-7. Copy both files to the WSL side and rename:
-
-    cp /mnt/c/Users/<you>/Downloads/.../SMIR.Lower_limb.051Y.F.CT.168-Pelvis-Thighs_Reconstruction.nii \
-       ~/FemuraLabs/data/raw/case01/thighs_on_full.nii
-    cp /mnt/c/Users/<you>/Downloads/.../SMIR.Lower_limb.051Y.F.CT.168-Pelvis-Thighs_Reconstruction.labels.csv \
-       ~/FemuraLabs/data/raw/case01/thighs_on_full.labels.csv
-
-### Producing the shanks NIfTI
-
-Repeat the procedure above with
-`...-Shanks-Feet_Segmentation.seg.nrrd` in place of the thighs file.
-Save the result as `shanks_on_full.nii` and `shanks_on_full.labels.csv`.
-
-### Verifying both files are on the full-limb grid
-
-    cd ~/FemuraLabs
-    python -c "import SimpleITK as sitk; \
-      a = sitk.ReadImage('data/raw/case01/thighs_on_full.nii'); \
-      b = sitk.ReadImage('data/raw/case01/shanks_on_full.nii'); \
-      print('thighs:', a.GetSize(), a.GetSpacing()); \
-      print('shanks:', b.GetSize(), b.GetSpacing())"
-
-Expected output:
-
-    thighs: (512, 512, 1637) (0.9765625, 0.9765625, 0.6997554898262024)
-    shanks: (512, 512, 1637) (0.9765625, 0.9765625, 0.6997554898262024)
-
-If either prints `(312, 205, 889)`, the "Segment geometry" dialog was not
-applied to that file — go back to that file's step 4, click the icon,
-confirm the full-limb dimensions, click OK, and re-export.
-
-### Merging into one multi-label file
-
-The two files are on the same grid, so voxel `(i, j, k)` in one is the
-same physical point as voxel `(i, j, k)` in the other. The merge reads
-each file, extracts femur and tibia by their source label values (see
-`docs/data.md` for the exact mapping), and writes them into a new array
-under labels 1–4.
-
-    cd ~/FemuraLabs
-    python - <<'PY'
-    import numpy as np
-    import SimpleITK as sitk
-
-    thighs = sitk.ReadImage('data/raw/case01/thighs_on_full.nii')
-    shanks = sitk.ReadImage('data/raw/case01/shanks_on_full.nii')
-    t = sitk.GetArrayFromImage(thighs)
-    s = sitk.GetArrayFromImage(shanks)
-
-    # Source label values, from the .labels.csv files. See docs/data.md.
-    merged = np.zeros_like(t, dtype=np.uint8)
-    merged[t == 5] = 1   # femur_R
-    merged[t == 6] = 2   # femur_L
-    merged[s == 2] = 3   # tibia_R
-    merged[s == 9] = 4   # tibia_L
-    merged[s == 3] = 5   # fibula_R
-    merged[s == 10] = 6  # fibula_L
-
-    out = sitk.GetImageFromArray(merged)
-    out.CopyInformation(thighs)
-    sitk.WriteImage(out, 'data/raw/case01/combined_seg.nii')
-    print('wrote', out.GetSize(), 'labels', np.unique(merged))
-    PY
-
-Expected:
-
-    wrote (512, 512, 1637) labels [0 1 2 3 4 5 6]
-
-`CopyInformation` is not optional. Without it, SimpleITK writes the new
-array with default geometry (spacing 1 mm, origin 0), and every downstream
-mesh would be 2 per cent the wrong size.
-
-The output filename in the script (`combined_seg.nii`) is a free
-choice. SimpleITK writes gzipped NIfTI if the path ends in `.nii.gz` and
-uncompressed if it ends in `.nii`; the array contents are identical. Both
-forms read back with `sitk.ReadImage` regardless of their extension,
-because SimpleITK detects the format from the file signature.
-
-### Verifying the merged file
-
-    python -c "import numpy as np, SimpleITK as sitk; \
-      im = sitk.ReadImage('data/raw/case01/combined_seg.nii'); \
-      arr = sitk.GetArrayFromImage(im); \
-      print(im.GetSize(), im.GetSpacing()); \
-      print('labels:', np.unique(arr)); \
-      print('voxels:', {int(v): int((arr == v).sum()) for v in np.unique(arr)})"
-
-Expected: `(512, 512, 1637)`, labels `[0 1 2 3 4 5 6]`, and non-zero
-counts at every label 1–6 with background (0) dominating. Femurs and
-tibias are in the millions of voxels; fibulas are ~77,000 voxels each
-(thinner bones). If any of 1–6 is zero, the merge script matched no
-voxels for that bone — check the source label value for that row
-against `docs/data.md` before touching anything else.
-
-### If the export produces a crop-sized file
-
-Two working alternatives, in order of reliability:
-
-**Fallback 1 — Export visible segments to binary labelmap.** Right-click
-the **segmentation node** in the Data module (not the segment names inside
-it, the top-level node whose name ends in `-Reconstruction` or
-`-Segmentation`) and choose **"Export visible segments to binary
-labelmap"** — the row immediately below "Export to file…". Slicer creates
-a new volume node on the current source volume's grid. Right-click that
-volume node → **Save** → format `NIFTI (.nii.gz)` or `NIFTI (.nii)`.
-
-**Fallback 2 — BRAINS Resample.** `Modules → Resample Image (BRAINS)`.
-Input Volume: the crop-sized labelmap. Reference Volume: the full-limb
-volume `SMIR.Lower_limb_051Y.F.CT.168_1`. Interpolation Mode:
-**NearestNeighbor** (mandatory for labels). Output Volume: a new node.
-Apply, then save the output as NIfTI.
-
-### What not to do
-
-- Do not save as `.seg.nrrd` and try to read it in Python. SimpleITK reads
-  it as a scalar array, not as label values.
-- Do not skip `CopyInformation` in the merge script. The default geometry
-  writes spacing 1 mm and downstream measurements become wrong by a
-  factor of 0.98.
-- Do not commit `combined_seg.nii`. It is derived data; `data/` is
-  gitignored.
-
-## Verifying a volume's geometry
-
-Reads a file with `io_volume.load_volume`, prints the array shape and
-the three geometry fields. The array shape is `(z, y, x)`; the three
-geometry fields are `(x, y, z)`. Comparing the two lines is the fastest
-way to confirm the file's geometry is not swapped.
-
-    PYTHONPATH=src python -c "from femuralabs.toolkit.fileio.volume import load_volume; \
-      v = load_volume('data/raw/case01/combined_seg.nii'); \
-      print(v.array.shape, v.spacing, v.origin)"
-
-Expected on case 01:
-
-    (1637, 512, 512) (0.9765625, 0.9765625, 0.6997554898262024) (-249.51171875, -392.51171875, 119.69999694824219)
-
-The array shape is the reverse of `GetSize()`'s `(512, 512, 1637)`. The
-origin is negated in x and y relative to what Slicer shows because
-SimpleITK reports in LPS and Slicer in RAS. Both are correct.
-
-If the array shape comes back as `(512, 512, 1637)`, the file was read
-through a tool that returns `(x, y, z)` order; do not call that a fix.
-The `io_volume` contract is `(z, y, x)` for the array, and
-`tests/test_io_volume.py::test_real_file_array_shape` pins it.
-
-## Extracting per-bone masks from the combined segmentation
-
-Reads `combined_seg.nii` and produces one `BoneMask` per bone, each
-carrying a boolean mask, voxel count, volume in mL, and centroid in LPS
-world coordinates.
-
-    PYTHONPATH=src python -c "from femuralabs.toolkit.fileio.volume import load_volume; \
-      from femuralabs.toolkit.imaging.masks import extract_masks; \
-      m = extract_masks(load_volume('data/raw/case01/combined_seg.nii')); \
-      [print(f'{b.name:<8} {b.voxel_count:>10}  {b.volume_ml:>8.1f} mL  x={b.centroid_world[0]:>9.1f} y={b.centroid_world[1]:>9.1f} z={b.centroid_world[2]:>9.1f}') for b in m.values()]"
-
-Expected on case 01 (fibula values are new in D09; if your run differs
-in the last two rows, that is the fibula, and the count should be
-~77k for each side):
-
-    femur_R      496845     331.6 mL  x=    -83.5 y=   -129.9 z=    870.7
-    femur_L      452747     302.1 mL  x=    101.0 y=   -131.6 z=    894.4
-    tibia_R      307340     205.1 mL  x=    -59.8 y=    -96.3 z=    493.8
-    tibia_L      287692     192.0 mL  x=     87.5 y=    -99.3 z=    510.0
-    fibula_R      77023     ~51.4 mL  x=    -75.9 y=    -96.6 z=    520.8
-    fibula_L      77233     ~51.5 mL  x=     93.4 y=    -96.0 z=    536.3
-
-Sanity checks on any new subject:
-
-- Femur volumes in the 250-400 mL range for an adult cadaver; tibia
-  150-250 mL. A value an order of magnitude off means spacing was read
-  in the wrong axis order.
-- `femur_L.x > femur_R.x` and `tibia_L.x > tibia_R.x`. In LPS the
-  patient's left is +x; a swapped sign means the direction matrix was
-  not applied or the (z, y, x) to (x, y, z) reorder was missed.
-- Femurs have a higher z (proximal) than tibias (distal). They are
-  separated by roughly 300-450 mm on a full lower-limb scan.
-
-`tests/test_masks.py` pins all three checks against the real file, so
-the command above is for inspection, not verification. Run
-`pytest tests/test_masks.py -v` for the actual check.
-
-## Producing an STL mesh from a mask
-
-Reads the combined segmentation, extracts one bone, builds the mesh in
-world millimetres, and writes an STL.
-
-    PYTHONPATH=src python -c "from femuralabs.toolkit.fileio.volume import load_volume; \
-      from femuralabs.toolkit.imaging.masks import extract_masks; \
-      from femuralabs.toolkit.imaging.mesh import mask_to_mesh, save_stl; \
-      v = load_volume('data/raw/case01/combined_seg.nii'); \
-      m = extract_masks(v)['femur_R']; \
-      verts, faces = mask_to_mesh(m.mask, v.spacing, v.origin, v.direction); \
-      save_stl('data/raw/case01/femur_R.stl', verts, faces); \
-      print(len(verts), 'verts', len(faces), 'faces', 'bbox', verts.min(0).round(1), verts.max(0).round(1))"
-
-Expected on case 01:
-
-    277167 verts 560642 faces bbox [-130.9 -170.3  658.2] [ -20.5  -76.6 1108.8]
-
-Sanity checks on any new subject:
-
-- `bbox` x should straddle the femur's centroid x. On this file the
-  centroid is -83.5 and the bbox is [-130.9, -20.5]. Positive x means
-  the direction matrix was dropped.
-- `bbox` z spans about 400-500 mm on a femur at full-limb scale.
-- The mesh opens in Slicer over the CT and sits on the bone, not at the
-  origin.
-
-**The ASCII STL is large** — 560,642 faces is roughly 110 MB. Do not
-commit it; it lives in `data/` which is gitignored. Decimation in a later
-task reduces the face count to 10-20 percent without visible loss at
-clinical scales.
-
-`tests/test_mesh.py::test_femur_mesh_is_near_mask_centroid` pins the
-direction-matrix check by comparing the mesh centroid with the mask
-centroid within 20 mm; run `pytest tests/test_mesh.py -v` for the
-verification.
-
-## Verifying a mesh
-
-Reads the combined segmentation, extracts the right femur, builds the mesh,
-and prints the edge counts and volume side by side.
-
-    PYTHONPATH=src python - <<'PY'
-    import numpy as np
-    from femuralabs.toolkit.fileio.volume import load_volume
-    from femuralabs.toolkit.imaging.masks import extract_masks
-    from femuralabs.toolkit.imaging.mesh import mask_to_mesh, signed_volume, edge_incidence
-
-    v = load_volume('data/raw/case01/combined_seg.nii')
-    m = extract_masks(v)['femur_R']
-    verts, faces = mask_to_mesh(m.mask, v.spacing, v.origin, v.direction)
-    counts = edge_incidence(verts, faces)
-    print('boundary edges:', counts['boundary'])
-    print('manifold edges:', counts['manifold'])
-    print('non-manifold edges:', counts['non_manifold'])
-    print('mesh volume (mm^3):', round(abs(signed_volume(verts, faces)), 1))
-    print('voxel volume (mm^3):', round(m.volume_ml * 1000, 1))
-    PY
-
-Expected on case 01:
-
-    boundary edges: 0
-    manifold edges: 840951
-    non-manifold edges: 6
-    mesh volume (mm^3): ~330000
-    voxel volume (mm^3): 331600.0
-
-Read the numbers as a diagnosis:
-
-- **`boundary = 0`** — the mesh is closed. Every triangle edge belongs to
-  another face. This is the property that volume, area, and boolean
-  operations require.
-- **`manifold`** — edges shared by exactly two faces; the vast majority.
-- **`non-manifold`** — edges shared by three or more faces. skimage's
-  marching cubes produces a handful at points where two surface patches
-  touch along a line. Six out of ~840,000 on a real femur at 1 mm is
-  normal, not a defect.
-- **`mesh volume`** should be within a few percent of the voxel volume.
-  Chamfering accounts for 5–10 percent; an order-of-magnitude difference
-  means the direction matrix or the axis reorder was dropped.
-
-If `boundary > 0`, the mesh is open. The usual cause is calling
-`measure.marching_cubes` with `allow_degenerate=False` (which strips the
-zero-area triangles that hold the surface closed at edge-touch points).
-A second cause is a mask with interior holes; `scipy.ndimage.binary_fill_holes`
-in `masks.py` fixes those.
-
-If `mesh volume` is much less than the voxel volume, the same interior
-holes are contributing negative volume from their inner surfaces. The
-fix is the same `binary_fill_holes` call.
-
-`tests/test_mesh.py` pins all three checks against the real file; run
-`pytest tests/test_mesh.py -v` for the actual verification. The command
-above is for inspection, not validation.
-
-## Running the pipeline on one case
-
-Reads a combined segmentation, extracts the four bones, meshes them,
-writes four STLs and one JSON summary. Deterministic: same input, same
-JSON.
-
-    PYTHONPATH=src python scripts/pipeline_demo.py \
-      --case data/raw/case01/combined_seg.nii \
-      --out output/case01
-
-Expected (vertex counts approximate; fibula rows are new in D09 and
-will print with smaller vert counts than the long bones):
-
-    wrote output/case01/summary.json
-      femur_R    277167 verts   331.60 mL
-      femur_L     ~250k verts   302.10 mL
-      tibia_R     ~150k verts   205.10 mL
-      tibia_L     ~140k verts   192.00 mL
-      fibula_R    ~40k verts    51.4 mL
-      fibula_L    ~40k verts    51.5 mL
-
-Then inspect the JSON:
-
-    cat output/case01/summary.json
-
-The `size` field is `[x, y, z]`, matching SimpleITK's `GetSize()`, not the
-array's `(z, y, x)`. `bbox_mm` is `null` for an absent bone, not a point
-at the origin. `output/` is gitignored; nothing here is committed.
-
-Pass the `--name` flag to override the case name in the JSON if the case
-file lives outside its own subject folder.
-
-`tests/test_pipeline_demo.py` pins the schema and determinism on a
-synthetic volume; run `pytest tests/test_pipeline_demo.py -v` for the
-check.
-
-## Loading hand-placed landmarks
-
-Reads a Slicer `.mrk.json` and returns `{name: (x, y, z)}` in LPS
-millimetres. The loader respects the file's `coordinateSystem` field:
-RAS files are negated in x and y to give LPS; LPS files are returned
-unchanged.
-
-    PYTHONPATH=src python -c "from femuralabs.toolkit.fileio.landmark import load_landmarks; \
-      h = load_landmarks('data/ref/landmarks_case01.mrk.json'); \
-      [print(f'{k:<22}', tuple(round(v,1) for v in val)) for k, val in h.items()]"
-
-Expected on case01 (verify sign of x: `_R` landmarks have negative x,
-`_L` landmarks have positive x, in LPS):
-
-    femoral_head_R         (-70.8, -148.1, 1084.5)
-    femoral_head_L         (94.2, -156.3, 1100.0)
-    knee_centre_R          (-71.2, -127.9, 663.3)
-    knee_centre_L          (81.9, -114.0, 685.0)
-    ankle_centre_R         (-52.4, -76.4, 305.2)
-    ankle_centre_L         (90.5, -89.9, 320.6)
-
-If any `_R` landmark has positive x, the left/right labels are swapped
-in the file. Fix by swapping suffixes in the `.mrk.json` (see
-`docs/landmarks.md` trap 2).
-
-## Femoral head centre by sphere fit
-
-Extracts the femur mesh, fits a sphere to the medial hemisphere of the
-proximal region, prints the fit centre and residual. Compares against
-the hand-placed reference.
-
-    PYTHONPATH=src python -c "
-    import numpy as np
-    from femuralabs.toolkit.fileio.volume import load_volume
-    from femuralabs.toolkit.imaging.masks import extract_masks
-    from femuralabs.toolkit.imaging.mesh import mask_to_mesh
-    from femuralabs.toolkit.geometry.landmarks import femoral_head_centre
-    from femuralabs.toolkit.fileio.landmark import load_landmarks
-    v = load_volume('data/raw/case01/combined_seg.nii')
-    m = extract_masks(v); h = load_landmarks('data/ref/landmarks_case01.mrk.json')
-    for side in ('R', 'L'):
-        verts, _ = mask_to_mesh(m[f'femur_{side}'].mask, v.spacing, v.origin, v.direction)
-        centre, radius, rms = femoral_head_centre(verts)
-        ref = np.array(h[f'femoral_head_{side}'])
-        print(f'femur_{side}: fit {centre.round(1)}, hand {ref.round(1)}, '
-              f'error {np.linalg.norm(centre-ref):.2f} mm, '
-              f'radius {radius:.1f} mm, rms {rms:.2f} mm')
-    "
-
-Expected on case01 with default `medial_window_mm=20`:
-
-    femur_R: fit (-73.3, -145.4, 1085.2), hand (-70.8, -148.1, 1084.5), error 3.81 mm, radius 18.3 mm, rms ~1 mm
-    femur_L: fit (92.5, -156.8, 1104.5), hand (94.2, -156.3, 1100.0), error 4.82 mm, radius 20.4 mm, rms ~1 mm
-
-Both errors are inside the hand-placement repeat distance for the same
-point (4.26 and 6.21 mm). The automatic fit is at the level of a second
-human placer.
-
-**Radius diagnostic.** An adult femoral head is 17–25 mm radius. A fit
-that returns 30+ mm has picked up the trochanter alongside the head
-and is not the head centre. If the fit returns an out-of-range radius,
-the medial window is wrong for this subject; see
-`docs/landmarks.md` ("Extending to case02 and case03") for the sweep
-diagnostic.
-
-`tests/test_landmarks.py` pins the radius range and the 10 mm error
-threshold against the case01 hand reference. Run
-`pytest tests/test_landmarks.py -v` for the check.
-
-## Ankle centre by malleoli midpoint
-
-Reads the tibia and fibula meshes, finds the plafond (the flat bottom
-of the shinbone that sits on the ankle bone), and takes the midpoint
-of the medial (tibia) and lateral (fibula) malleoli at that level.
-Prints the fit centre, the hand reference, the error, and the three
-intermediate values that decided the fit.
-
-    PYTHONPATH=src python -c "
-    import numpy as np
-    from femuralabs.toolkit.fileio.volume import load_volume
-    from femuralabs.toolkit.imaging.masks import extract_masks
-    from femuralabs.toolkit.imaging.mesh import mask_to_mesh
-    from femuralabs.toolkit.geometry.landmarks import ankle_centre
-    from femuralabs.toolkit.fileio.landmark import load_landmarks
-    v = load_volume('data/raw/case01/combined_seg.nii')
-    m = extract_masks(v)
-    h = load_landmarks('data/ref/landmarks_case01.mrk.json')
-    for side in ('R', 'L'):
-        tv, _ = mask_to_mesh(m[f'tibia_{side}'].mask, v.spacing, v.origin, v.direction)
-        fv, _ = mask_to_mesh(m[f'fibula_{side}'].mask, v.spacing, v.origin, v.direction)
-        centre, info = ankle_centre(tv, fv)
-        ref = np.array(h[f'ankle_centre_{side}'])
-        err = float(np.linalg.norm(centre - ref))
-        print(f'ankle_centre_{side}: auto {centre.round(1)}, hand {ref.round(1)}, '
-              f'error {err:.2f} mm, plafond_z {info[\"plafond_z\"]:.1f} mm, '
-              f'medial_x {info[\"medial_x\"]:.1f}, lateral_x {info[\"lateral_x\"]:.1f}')
-    "
-
-Expected on case 01:
-
-    ankle_centre_R: auto [-53.7 -79.4 307.7], hand [-52.4 -76.4 305.2], error 4.15 mm, plafond_z 307.7 mm, medial_x -28.3, lateral_x -79.1
-    ankle_centre_L: auto [ 92.8 -89.7 324.1], hand [ 90.5 -89.9 320.6], error 4.14 mm, plafond_z 324.1 mm, medial_x 64.5, lateral_x 121.1
-
-Both errors are about twice the hand-placement repeat distance for the
-same landmark (1.97 mm on R; the L repeat is treated as ~2.0 mm, not
-0.84, per `docs/conventions.md` Known limitations). That is close to
-the hand reference, but *not* at the level of a second human placer —
-weaker than the femoral head fit, which matched the hand repeat.
-
-**Reading the diagnostic if a number looks wrong:**
-
-- **`plafond_z` within 3 mm of the tibia bottom** → the mesh is
-  truncated; the search window found the malleolar tip, not the
-  plafond. Check the tibia mask covers the full bone.
-- **`plafond_z` more than 30 mm above the tibia bottom** → the widest
-  band is a metaphyseal flare, not the plafond. Check the mask for a
-  spur or a fracture callus.
-- **`medial_x` on the wrong side of `lateral_x`** → the R/L
-  detection is confused. This is caught by an explicit assertion in
-  `tests/test_landmarks.py`.
-- **Error > 6 mm with all three intermediates sane** → the
-  assumption "plafond centroid ≈ talar dome directly beneath it" is
-  what to question. That is the trigger for adding talus (see
-  `docs/landmarks.md`, ankle_centre, "Why no talus yet").
-
-`tests/test_landmarks.py::test_ankle_centre_right_agrees_with_hand_placement`
-and `..._left_agrees_with_hand_placement` pin the 6 mm threshold and the
-medial-vs-lateral ordering. Run `pytest tests/test_landmarks.py -v` for
-the verification; the command above is for inspection.
-
-## Handling split-volume subjects (MRML workflow)
-
-If a subject's folder contains two CT volumes (e.g., `CT.266` and `CT.269`):
-
-1. **Do not** export the halves individually.
-2. Open 3D Slicer. `File → Open Scene` and select the `.mrml` file in the root of the subject folder (e.g., `SMIR.Lower_limb.045Y.F.CT.mrml`).
-3. Verify that the full-limb volume (512×512×~1600+) and both segmentations load.
-4. Follow the standard export procedure from "Combining the two reference segmentations" (Slicer segment geometry → NIfTI → `merge_segmentation.py`).
-
-If the MRML file is missing, the subject is considered unusable. Do not attempt to manually stack the halves.
-
-## Diagnostic scripts (Appendix)
-
-These short scripts are used to verify data integrity after merges, before running the main pipeline.
-
-### Verify mask sides and volumes (LPS check)
-Run this after merging a new subject to ensure the left/right orientation didn't flip and the bone volumes are anatomically plausible.
-
-    PYTHONPATH=src python -c "
-    import numpy as np
-    from femuralabs.toolkit.fileio.volume import load_volume
-    from femuralabs.toolkit.imaging.masks import extract_masks
-    v = load_volume('data/raw/caseXX/combined_seg.nii')
-    m = extract_masks(v)
-    for name, b in m.items():
-        print(f'{name:<9} {b.voxel_count:>8} {b.volume_ml:>7.1f} mL  x={b.centroid_world[0]:>7.1f}')
-    print('femur OK' if m['femur_L'].centroid_world[0] > m['femur_R'].centroid_world[0] else 'FEMUR SWAPPED')
-    "
-
-### Verify hand-placed landmarks
-Run this after saving a `.mrk.json` file to ensure all 10 points are present, on the correct side (x-sign), and resting on the bone mask.
-
-    PYTHONPATH=src python -c "
-    import numpy as np
-    from femuralabs.toolkit.fileio.landmark import load_landmarks
-    from femuralabs.toolkit.fileio.volume import load_volume
-    from femuralabs.toolkit.imaging.masks import extract_masks
-    h = load_landmarks('data/ref/landmarks_caseXX.mrk.json')
-    v = load_volume('data/raw/caseXX/combined_seg.nii')
-    m = extract_masks(v)
-    D = np.array(v.direction).reshape(3,3); S = np.array(v.spacing); O = np.array(v.origin)
-    def min_dist(pt, mask):
-        zi, yi, xi = np.where(mask)
-        xyz = np.stack([xi, yi, zi], axis=1)
-        return float(np.linalg.norm(O + (xyz * S) @ D.T - pt, axis=1).min())
-    for name, bone in [('femoral_head_R', 'femur_R'), ('knee_centre_R', 'femur_R'), ('ankle_centre_R', 'tibia_R'), ('condyle_medial_R', 'femur_R'), ('plateau_medial_R', 'tibia_R')]:
-        if name in h:
-            print(f'{name:<20} x={h[name][0]:>7.1f}  dist_to_bone={min_dist(np.array(h[name]), m[bone].mask):.2f} mm')
-    "
-
-## Generating the reports (D12)
-
-Once the JSONs for all three cases exist under `output/<case>/summary.json`, the markdown reports can be generated by:
-
-    python scripts/make_report_tables.py
-
-This parses the JSON files (so the tables cannot drift from the actual data) and writes `reports/landmark_errors.md` and `reports/angles_case.md`. The angle summary includes bias and mean absolute difference across the available subjects.
-
-## Running TotalSegmentator on low-RAM hardware
-
-**Hardware constraint:** TotalSegmentator v2.18.0 requires **8 GB of CPU RAM** for the `fast` model and **16 GB** for the standard model. On a 16 GB WSL2 machine with 7.7 GB of usable RAM (like the development laptop), running the full 512×512×1637 CT volume will result in a **Linux OOM Killer (SIGKILL: 9)**.
-
-**What goes wrong:**
-1. The model successfully runs the prediction (using a sliding window).
-2. At the very end, it tries to resample the logits (117 classes for `total`, 11 for `appendicular_bones`) back to the original grid.
-3. This allocation is roughly 200 GB. The OS kills the parent process instantly.
-
-**What we tried and failed:**
-- `--fast` and `--fastest`: Still OOMs because the final resampling tensor is too large.
-- `--force_split` and `--body_seg`: Splits the prediction, but the final resampling still allocates the full 200 GB tensor.
-- `-nr_thr_saving 1`: Prevents threaded saving, but doesn't help the core memory spike.
-
-**The working solution (Bounding Box Crop + OOM Wait Loop):**
-We cannot avoid the OOM killer, so we survive it.
-1. **Resample the CT to 3mm** using `SimpleITK`.
-2. **Crop to the bone bounding box** using the reference `combined_seg.nii` mask (plus a 20-voxel margin).
-3. **Run TotalSegmentator** on this tiny cropped volume.
-4. **Wait for the crash**: The parent process is killed, but the `TotalSegmentator` child process detaches and keeps running in the background.
-5. **Poll the filesystem**: Wait until `totalseg_cropped.nii` appears on disk.
-6. **Paste back**: Upsample the cropped mask back to the full 512×512×1637 grid using `NearestNeighbor`.
-
-**Commands:**
-The wrapper script handles all of this automatically:
-    PYTHONPATH=src python scripts/data/run_totalseg_all.py --case case02
-
-If running manually:
-    PYTHONPATH=src python scripts/data/totalseg_bbox_crop.py --ct data/raw/case02/case02_ct.nii.gz --ref data/raw/case02/combined_seg.nii --out output/totalseg/case02 --task total
-
-**Limitations:**
-- The 3mm resampling means the mask boundaries have a ~3mm stair-step error compared to the native 0.9mm CT. This is acceptable for Dice/HD95, but if you need 1.5mm accuracy, you must run this on a machine with >32 GB of RAM.
-- This technique relies on having a reference mask to define the bounding box. If you are running TotalSegmentator on a completely new, unsegmented scan, you must write a separate script to find the bounding box using a HU threshold.
-- The OOM wait-loop adds ~5 minutes of idle time to every run.
-
-**Label Mapping Trap (v2.18.0):**
-- The `total` task outputs femurs at label `75` (Left) and `76` (Right).
-- The `appendicular_bones` task outputs Tibias at label `2` and Fibulas at label `3`. **It does not separate Left and Right**. You must split these arrays at the midline (world x=0) to separate the left and right legs.
-
-### Fixing upside-down or shifted geometry
-
-If the merged segmentation results in both femurs having a positive X coordinate (or if the Z-axis is flipped), the subject was likely stored upside down and Slicer dropped the affine transform. 
-
-Do not use the raw CT geometry. Instead, run:
-
-    PYTHONPATH=src python scripts/data/fix_upside_down_geometry.py \
-      --in data/raw/case04/combined_seg.nii \
-      --out data/raw/case04/combined_seg_fixed.nii
-
-Verify the fix by checking that `femur_L x` is positive and `femur_R x` is negative:
-
-    PYTHONPATH=src python -c "
-    from femuralabs.toolkit.fileio.volume import load_volume
-    from femuralabs.toolkit.imaging.masks import extract_masks
-    v = load_volume('data/raw/case04/combined_seg_fixed.nii')
-    m = extract_masks(v)
-    print('femur_L x:', m['femur_L'].centroid_world[0])
-    print('femur_R x:', m['femur_R'].centroid_world[0])
-    "
-
-**Important:** The raw `SMIR.Body...nii` is a full-body CT. Do not use it for visual verification of `combined_seg_fixed.nii`. Instead, use the MRML scene for landmarking: open the scene, place landmarks on the original segmentations, and save. The scene's coordinate system matches the manually fixed `combined_seg.nii`.
-
-## Handling Full-Body Subjects (The Bounding Box Crop)
-
-When a subject provides a full-body CT (`SMIR.Body...nii`), separate Thigh/Shank segmentations, and a `Transform-Upside-Down.h5`, do not attempt to use Slicer for geometry extraction. Slicer drops the H5 translation when exporting, which breaks alignment.
-
-Instead, use the memory-safe Python pipeline. It applies the H5 transform mathematically, finds the physical bounding box of the masks, extracts *only* the lower limb from the CT (bypassing OOM), and centers the patient at X=0.
-
-    PYTHONPATH=src python scripts/data/process_full_body_raw.py \
-      --ct /path/to/SMIR.Body...nii \
-      --thighs-seg /path/to/Pelvis-Thighs...seg.nrrd \
-      --shanks-seg /path/to/Shanks-Feet...seg.nrrd \
-      --transform /path/to/Transform-Upside-Down.h5 \
-      --out-dir data/raw/caseXX
-
-This outputs `ct_cropped.nii` and `combined_seg.nii`, which are perfectly aligned, right-side up, and ready for landmark placement in Slicer.
+---
