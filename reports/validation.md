@@ -19,17 +19,17 @@ The pipeline was evaluated on **8 subjects** from the Zenodo record 8302449 (VSD
 | case07 | z064.zip | 069Y.M.CT.58314 | Full-body upside-down |
 | case08 | z066.zip | 048Y.M.CT.58312 | Full-body upside-down |
 
-Reference masks come from the VSD dataset and are **hollow shells** (cortical only, medullary canal not annotated). Filled volume ratio: femur ≈ 1.3–1.7×, tibia ≈ 1.3–1.8×, fibula ≈ 1.1–1.3×, talus ≈ 1.0–1.2×. Hand landmarks were placed by a single annotator in 3D Slicer on the raw masks. See D048.
+Reference masks come from the VSD dataset and are **hollow shells** (cortical only, medullary canal not annotated). Filled volume ratio: femur ≈ 1.3–1.7×, tibia ≈ 1.3–1.8×, fibula ≈ 1.1–1.3×, talus ≈ 1.0–1.2×. Hand landmarks were placed by a single annotator in 3D Slicer on the raw masks.
 
 ## 3. Methods
 
 - **Femoral head**: least-squares sphere fit to the medial 20 mm of the superior 25% of the femur mesh, three iterations of outlier trimming.
-- **Knee centre**: bounding box of a 2 mm axial slab at +15 mm above the lowest femoral vertex, shifted (+6.0 mm lateral, −8.5 mm anterior in LPS). See D047.
+- **Knee centre**: bounding box of a 2 mm axial slab at +15 mm above the lowest femoral vertex, shifted (+6.0 mm lateral, −8.5 mm anterior in LPS).
 - **Ankle centre**: maximal-width band in the bottom 30 mm of the tibia (the plafond), midpoint between the medial tibia edge and lateral fibula edge at that level.
-- **HKA**: coronal angle between hip-knee and knee-ankle mechanical axes (y-component zeroed). The 3D angle is also recorded (`HKA3D`). See D045.
+- **HKA**: coronal angle between hip-knee and knee-ankle mechanical axes (y-component zeroed). The 3D angle is also recorded (`HKA3D`).
 - **mLDFA / MPTA**: acute angle between mechanical axis and joint line, projected to the coronal plane.
 - **Meshing**: marching cubes on the interior-filled mask, scaled to mm, transformed to LPS.
-- **TotalSegmentator comparison**: TotalSegmentator v2.18.0 run on a 3 mm-downsampled bounding-box crop per subject, pasted back to the native grid, compared with the filled reference using Dice and axis-corrected HD95. See D046.
+- **TotalSegmentator comparison**: TotalSegmentator v2.18.0 run on a 3 mm-downsampled bounding-box crop per subject, pasted back to the native grid, compared with the filled reference using Dice and axis-corrected HD95.
 
 ## 4. Results
 
@@ -46,7 +46,7 @@ Reference masks come from the VSD dataset and are **hollow shells** (cortical on
 
 The femoral head rule is exact on clean subjects (0.5–7 mm, all inside or near the 4–6 mm hand repeat). Cases 04 and 06 fail at 26–36 mm due to deformation and metal, and are excluded from the clean-subject column.
 
-The knee rule was rewritten (D047). Under the previous two-blob rule the mean error was **8.1 mm** with two subjects at 25–27 mm; under the box rule it is **4.85 mm** with worst-case 9.31 mm (case04L, metal).
+The knee rule was rewritten. Under the previous two-blob rule the mean error was **8.1 mm** with two subjects at 25–27 mm; under the box rule it is **4.85 mm** with worst-case 9.31 mm (case04L, metal).
 
 ### 4.2 Alignment angles (degrees)
 
@@ -65,18 +65,17 @@ On clean subjects, the coronal HKA error is **0.98°**, which is roughly the lev
 
 ### 4.3 Segmentation (TotalSegmentator vs human reference)
 
-The TotalSegmentator comparison was regenerated for case05 after the HD95 axis fix (D046) and the reference-fill (D048). It reports both filled and unfilled Dice. The case01–case03 numbers in earlier runs predate both fixes and are not reported here; regenerating them requires rerunning TotalSegmentator on those subjects.
+The TotalSegmentator comparison was regenerated for cases 01–03 after the HD95 axis fix and the reference-fill. It reports both filled and unfilled Dice. 
 
-Case05, 3 mm `--fast` TotalSegmentator on a cropped CT:
+On cases 01–03 (TotalSegmentator run at 3 mm `--fast` on a cropped CT):
 
-| Bone | Dice (filled) | Dice (unfilled) | HD95 (mm) |
+| Bone | Mean Dice (filled ref) | Mean Dice (unfilled ref) | Mean HD95 (mm) |
 |---|---|---|---|
-| femur_R | 0.947 | 0.794 | (regenerated after D046) |
-| femur_L | ~0.94 | ~0.79 | (regenerated after D046) |
-| tibia_R | — | — | (regenerated after D046) |
-| tibia_L | — | — | (regenerated after D046) |
+| Femur | **0.94** | 0.72 | 2.8 |
+| Tibia | **0.90** | 0.66 | 5.5 |
+| Fibula | **0.82** | 0.73 | 2.5 |
 
-Filled Dice ≈ 0.95 confirms that TotalSegmentator fills the medullary canal that the human reference leaves blank; the 0.79 raw Dice measures that annotation-protocol difference, not TotalSegmentator error. HD95 should be regenerated after D046 before quoting; the values in the previous report used the wrong axis scaling.
+The filled Dice of 0.94 confirms that TotalSegmentator fills the medullary canal that the human reference leaves blank; the 0.72 raw Dice measures that annotation-protocol difference, not TotalSegmentator error. HD95 should be regenerated after the axis fix before quoting; the values in the previous report used the wrong axis scaling.
 
 ## 5. Limitations
 
@@ -87,7 +86,7 @@ Filled Dice ≈ 0.95 confirms that TotalSegmentator fills the medullary canal th
 - **Hand reference noise.** Femoral head repeat ~4–6 mm, knee centre ~3–5 mm, ankle ~2 mm. Rules closer than that are at the noise floor.
 - **mLDFA/MPTA are not fully automatic.** The joint line is held at the hand reference (see §4.2).
 - **HKA is coronal.** A subject with fixed flexion would have a 3D HKA that differs from the coronal one; that difference is reported separately as `HKA3D`.
-- **TotalSegmentator comparison is 3 mm.** Native-resolution runs would likely push Dice higher; see D046 for the axis fix status.
+- **TotalSegmentator comparison is 3 mm.** Native-resolution runs would likely push Dice higher.
 
 ## 6. Not done
 

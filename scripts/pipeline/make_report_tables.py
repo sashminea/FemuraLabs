@@ -7,6 +7,7 @@ import numpy as np
 CASES = [f"case{i:02d}" for i in range(1, 9)]
 OUT_DIR = Path("output")
 REPORT_DIR = Path("reports")
+DATA_DIR = REPORT_DIR / "data"
 
 def load_summary(case):
     path = OUT_DIR / case / "summary.json"
@@ -16,7 +17,8 @@ def load_summary(case):
 
 def main():
     REPORT_DIR.mkdir(exist_ok=True)
-    
+    DATA_DIR.mkdir(exist_ok=True)
+
     lm_rows = []
     angle_rows = []
     angle_diffs = {}
@@ -24,7 +26,7 @@ def main():
     for case in CASES:
         d = load_summary(case)
         if not d: continue
-        
+
         if "landmarks" in d:
             for name, data in d["landmarks"].items():
                 delta = data.get("delta_mm", [0, 0, 0])
@@ -32,7 +34,7 @@ def main():
                     f"| {case} | {name:<18} | {data['error_mm']:>5.2f} | "
                     f"({delta[0]:+.1f}, {delta[1]:+.1f}, {delta[2]:+.1f}) |"
                 )
-                
+
         if "angles" in d:
             for name, data in d["angles"].items():
                 diff = data["diff_deg"]
@@ -62,7 +64,7 @@ def main():
         "| Angle | n | Bias | SD | Median abs | Mean abs |",
         "|---|---|---|---|---|---|"
     ]
-    
+
     for name, diffs in angle_diffs.items():
         arr = np.array(diffs)
         bias = np.mean(arr)
@@ -82,15 +84,16 @@ def main():
         "|---|---|---|---|---|"
     ]
     for case in CASES:
-        path = REPORT_DIR / f"seg_results_{case}.json"
+        path = DATA_DIR / f"seg_results_{case}.json"
         if not path.exists(): continue
         seg_data = json.loads(path.read_text())
         for bone, metrics in seg_data.items():
             d_filled = metrics.get('dice', 0.0)
-            d_raw = metrics.get('dice_unfilled', 0.0)
+            d_raw = metrics.get('dice_unfilled')
+            d_raw_str = f"{d_raw:.3f}" if d_raw is not None else "n/a"
             hd = metrics.get('hd95_mm', 0.0)
-            seg_md.append(f"| {case} | {bone} | {d_filled:.3f} | {d_raw:.3f} | {hd:.2f} |")
-            
+            seg_md.append(f"| {case} | {bone} | {d_filled:.3f} | {d_raw_str} | {hd:.2f} |")
+
     (REPORT_DIR / "segmentation_errors.md").write_text("\n".join(seg_md) + "\n")
     print("Wrote reports/segmentation_errors.md")
 

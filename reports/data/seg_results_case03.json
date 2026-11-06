@@ -1,0 +1,32 @@
+{
+  "femur_R": {
+    "dice": 0.936,
+    "dice_unfilled": 0.751,
+    "hd95_mm": 2.02
+  },
+  "femur_L": {
+    "dice": 0.938,
+    "dice_unfilled": 0.734,
+    "hd95_mm": 1.91
+  },
+  "tibia_R": {
+    "dice": 0.873,
+    "dice_unfilled": 0.687,
+    "hd95_mm": 5.41
+  },
+  "tibia_L": {
+    "dice": 0.871,
+    "dice_unfilled": 0.673,
+    "hd95_mm": 4.51
+  },
+  "fibula_R": {
+    "dice": 0.794,
+    "dice_unfilled": 0.73,
+    "hd95_mm": 2.71
+  },
+  "fibula_L": {
+    "dice": 0.795,
+    "dice_unfilled": 0.717,
+    "hd95_mm": 2.56
+  }
+}
