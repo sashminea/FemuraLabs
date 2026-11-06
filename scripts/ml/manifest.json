@@ -1,0 +1,34 @@
+{
+  "case01": {
+    "ct": "/mnt/d/Femuralabs/Day 6/SMIR.Lower_limb.051Y.F.CT.168.nrrd",
+    "seg": "data/raw/case01/combined_seg.nii"
+  },
+  "case02": {
+    "ct": "/mnt/d/Femuralabs/D07/case02/023/SMIR.Lower_limb.074Y.M.CT.521/SMIR.Lower_limb.074Y.M.CT.521.nrrd",
+    "seg": "data/raw/case02/combined_seg.nii"
+  },
+  "case03": {
+    "ct": "/mnt/d/Femuralabs/D07/case03/014/014/SMIR.Lower_limb.030Y.F.CT.547/SMIR.Lower_limb.030Y.F.CT.547.nrrd",
+    "seg": "data/raw/case03/combined_seg.nii"
+  },
+  "case04": {
+    "ct": "data/raw/case04/ct_cropped.nii",
+    "seg": "data/raw/case04/combined_seg.nii"
+  },
+  "case05": {
+    "ct": "data/raw/case05/ct_cropped.nii",
+    "seg": "data/raw/case05/combined_seg.nii"
+  },
+  "case06": {
+    "ct": "data/raw/case06/ct_cropped.nii",
+    "seg": "data/raw/case06/combined_seg.nii"
+  },
+  "case07": {
+    "ct": "data/raw/case07/ct_cropped.nii",
+    "seg": "data/raw/case07/combined_seg.nii"
+  },
+  "case08": {
+    "ct": "data/raw/case08/ct_cropped.nii",
+    "seg": "data/raw/case08/combined_seg.nii"
+  }
+}
