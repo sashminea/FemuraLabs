@@ -29,6 +29,7 @@
       data/                     merge_segmentation.py, process_full_body_raw.py,
                                 paste_back.py, totalseg_bbox_crop.py,
                                 fix_upside_down_geometry.py
+      ml/                       prepare_dataset.py, common.py, train.py, validate.py
       pipeline/                 pipeline_demo.py, run_all_cases.py,
                                 compare_segmentations.py, make_report_tables.py,
                                 calculate_agreement.py, demo_synthetic.py
@@ -54,7 +55,7 @@
 ## Data pipeline
 
 Two input layouts are supported. Both converge on a single `combined_seg.nii`
-with 8 fixed labels, after which the pipeline is identical.
+with 8 fixed labels, after which the geometric pipeline is identical.
 
 ### Layout A: Standard lower-limb (case01–case03)
 
@@ -75,7 +76,7 @@ with 8 fixed labels, after which the pipeline is identical.
          5. Center the patient at X=0
       -> combined_seg.nii + ct_cropped.nii (aligned, centered, right-side up)
 
-### Converged pipeline
+### Converged geometric pipeline
 
     combined_seg.nii (labels 1=femur_R, 2=femur_L,
                               3=tibia_R, 4=tibia_L,
@@ -87,7 +88,7 @@ with 8 fixed labels, after which the pipeline is identical.
       -> mesh verification (watertight, volume)      [imaging/mesh.py]
       -> landmarks:
            femoral_head_centre (sphere fit)          [geometry/landmarks.py]
-           knee_centre (two-condyle split)           [geometry/landmarks.py]
+           knee_centre (bounding box rule)           [geometry/landmarks.py]
            ankle_centre (plafond + malleoli)         [geometry/landmarks.py]
       -> alignment angles (HKA, MAD, mLDFA, MPTA)    [geometry/alignment.py]
       -> hand-reference comparison                   [pipeline_demo.py]
@@ -95,7 +96,7 @@ with 8 fixed labels, after which the pipeline is identical.
       -> report tables                               [make_report_tables.py]
       -> validation report                           [reports/validation.md]
 
-### Second method (segmentation comparison)
+### Second method (TotalSegmentator comparison)
 
     Combined segmentation + CT
       -> run_totalseg_all.py (OOM-safe wrapper)
@@ -105,6 +106,26 @@ with 8 fixed labels, after which the pipeline is identical.
       -> compare_segmentations.py (Dice, HD95 in mm)
       -> seg_results_<case>.json
       -> segmentation_errors.md
+
+## Machine Learning Pipeline
+
+We also train a from-scratch 3D segmentation model (SegResNet) to predict the bone masks directly from the CT.
+
+    combined_seg.nii + raw CT
+      -> prepare_dataset.py                         [scripts/ml/]
+         1. Fill bone interiors at native resolution
+         2. Resample CT (linear) and masks (nearest) to 1.5 mm isotropic
+         3. Save <case>_ct.npy (int16 HU) and <case>_seg.npy (uint8)
+      -> data/ml_npy/
+      -> train.py (runs on Kaggle/Colab T4 GPU)
+         1. PatchSampler extracts 96^3 cubes (with foreground bias)
+         2. SegResNet trains using DiceCELoss
+         3. Saves best.pt based on val Dice
+      -> validate.py
+         1. Sliding-window inference on 1.5mm grids
+         2. split_sides() converts 5 merged classes -> 8 labels
+         3. Upsample to native grid, compute Dice/HD95
+      -> reports/data/seg_results_caseXX.json
 
 ## Existing pipeline (no real data required)
 
@@ -123,9 +144,9 @@ full pipeline can be exercised without downloading any CT data.
 ## Where each fact lives
 
 - **How to run a stage**: `docs/runbook.md`
-- **Why a design looks unusual**: `docs/decisions.md` (D001 to D043)
+- **Why a design looks unusual**: `docs/decisions.md`
 - **What the data is, licence, coverage**: `docs/data.md`
-- **Subject-to-case mapping**: `docs/data.md` (must be updated whenever a new case is added)
+- **Subject-to-case mapping**: `docs/data.md`
 - **Citations**: `CITATION.cff`
 - **Rules for contributors and AI agents**: `AGENTS.md`
 - **Call graphs at each stage**: `docs/FLOW.md`

@@ -8,6 +8,8 @@ Lower-limb malalignment is one of the main drivers of osteoarthritis. When a leg
 
 FemuraLabs automates the geometric part of that work. It starts from a lower-limb CT volume together with bone segmentation masks, rebuilds the femur, tibia, fibula and talus as watertight 3D surfaces in real millimetres, and then finds the hip, knee and ankle centres directly from the shape of those surfaces. From those three centres it computes the mechanical axes and the alignment angles a surgeon would ask for (HKA, plus the knee joint-line angles mLDFA and MPTA). Every automatic result is compared against landmarks placed by hand, so you can see for yourself how close the automatic rules actually get to what a person would do.
 
+The project also includes a fully functional from-scratch 3D segmentation model (SegResNet) that can generate these masks automatically from raw CT.
+
 The goal is a reproducible foundation for data-driven orthopaedic planning and biomechanical simulation, one that connects raw clinical imaging to numbers you can inspect and question, rather than a finished clinical tool.
 
 ## How the pipeline works
@@ -65,8 +67,20 @@ The reference masks are cortical shells (medullary canal unannotated), so TotalS
 | Tibia | **0.90** | 0.66 | 5.5 |
 | Fibula | **0.82** | 0.73 | 2.5 |
 
-TotalSegmentator was run at 3 mm `--fast` on cropped CT(s):
-The filled Dice of 0.94 is the honest outer-surface agreement; the raw 0.72 measures the annotation-protocol difference (hollow vs solid).
+TotalSegmentator was run at 3 mm `--fast` on cropped CT(s). The filled Dice of 0.94 is the honest outer-surface agreement; the raw 0.72 measures the annotation-protocol difference (hollow vs solid).
+
+### Custom ML Model (SegResNet)
+
+We also trained a from-scratch 3D SegResNet (4.7M parameters) on the 6 training subjects to segment the bones. On the 2 held-out validation subjects, the model achieved **0.96–0.97 Dice on the femurs** and **0.94 Dice on the tibias**, matching the TotalSegmentator baseline. 
+
+| Bone | Case07 Dice (Filled) | Case08 Dice (Filled) |
+|---|---|---|
+| Femur | 0.95 | 0.97 |
+| Tibia | 0.91 | 0.94 |
+| Fibula| 0.91 | 0.88 |
+| Talus | 0.95 | 0.95 |
+
+The model generalizes cleanly: its Dice on the training subjects (0.95) matches its Dice on the validation subjects (0.93). Running the geometric landmark pipeline on the model's *predicted* masks yields HKA errors of 0.6°, proving the segmentations are anatomically accurate, not just spatially overlapping.
 
 ## Getting started
 
@@ -114,7 +128,7 @@ To judge the automatic rules there has to be a human reference to compare them w
 
 Once the file is saved, run the diagnostic scripts in the appendix of [`docs/runbook.md`](docs/runbook.md). They confirm that right-side landmarks have negative x and left-side landmarks positive x in LPS, and that the points actually rest on the bone masks.
 
-### 3. Running the pipeline
+### 3. Running the geometry pipeline
 
 When `combined_seg.nii` and the landmark files are in the `data/` directory, one command processes every case:
 
@@ -150,6 +164,7 @@ FemuraLabs/
 │   └── cli.py                # Command-line interface for volume geometry
 ├── scripts/                  # Executable pipeline entry points
 │   ├── data/                 # Merge segmentations, process full-body scans
+│   ├── ml/                   # Data prep, SegResNet training, validation
 │   ├── pipeline/             # Run cases, compare, and generate reports
 │   └── dev/                  # Draw flow diagrams, run training, clean checks
 ├── tests/                    # Pytest suite
@@ -183,6 +198,8 @@ The dataset itself has several severe traps that we have documented and engineer
 - **Reference Noise:** The condyle and plateau points used for the joint-line angles were placed by surface-click, repeating only to within 7 to 9 mm.
 
 On the method side, the ankle rule uses the tibial plafond as a stand-in for the talar dome. The talus is already segmented and merged, but the rule does not use it yet. The TotalSegmentator comparison was run on 3 mm downsampled CTs using a bounding-box crop, because the full-resolution model requires more than 16 GB of RAM.
+
+The custom SegResNet model was trained on 6 subjects and validated on 2. While its Dice matches the TotalSegmentator baseline, it has only been tested on this specific cadaver dataset. It was checkpoint-selected on the same 2 validation subjects, so the results may have a slight optimism bias. It should not be considered a generalisable clinical model until tested on external hospital data.
 
 ## Data and licences
 

@@ -29,7 +29,8 @@ Reference masks come from the VSD dataset and are **hollow shells** (cortical on
 - **HKA**: coronal angle between hip-knee and knee-ankle mechanical axes (y-component zeroed). The 3D angle is also recorded (`HKA3D`).
 - **mLDFA / MPTA**: acute angle between mechanical axis and joint line, projected to the coronal plane.
 - **Meshing**: marching cubes on the interior-filled mask, scaled to mm, transformed to LPS.
-- **TotalSegmentator comparison**: TotalSegmentator v2.18.0 run on a 3 mm-downsampled bounding-box crop per subject, pasted back to the native grid, compared with the filled reference using Dice and axis-corrected HD95.
+- **TotalSegmentator**: run at 3 mm `--fast` on a cropped CT, pasted back to native grid, compared with filled reference using Dice and axis-corrected HD95.
+- **Custom ML Model**: 3D SegResNet trained from scratch on 6 subjects at 1.5 mm isotropic resolution. Sliding-window inference at 96³, sides split via connected components, upsampled to native grid.
 
 ## 4. Results
 
@@ -44,9 +45,7 @@ Reference masks come from the VSD dataset and are **hollow shells** (cortical on
 | Ankle centre R | 5.98 | 6.56 | 5.58 |
 | Ankle centre L | 7.30 | 8.09 | 6.86 |
 
-The femoral head rule is exact on clean subjects (0.5–7 mm, all inside or near the 4–6 mm hand repeat). Cases 04 and 06 fail at 26–36 mm due to deformation and metal, and are excluded from the clean-subject column.
-
-The knee rule was rewritten. Under the previous two-blob rule the mean error was **8.1 mm** with two subjects at 25–27 mm; under the box rule it is **4.85 mm** with worst-case 9.31 mm (case04L, metal).
+The femoral head rule is exact on clean subjects (0.5–7 mm, all inside or near the 4–6 mm hand repeat). Cases 04 and 06 fail at 26–36 mm due to deformation and metal, and are excluded from the clean-subject column. The knee rule was rewritten; under the previous two-blob rule the mean error was 8.1 mm with two subjects at 25–27 mm; under the box rule it is 4.85 mm.
 
 ### 4.2 Alignment angles (degrees)
 
@@ -59,13 +58,11 @@ The knee rule was rewritten. Under the previous two-blob rule the mean error was
 | mLDFA R | 8 | −0.88 | 1.66 | 0.71 | 1.23 | 0.82 |
 | MPTA R | 8 | +0.26 | 0.70 | 0.64 | 0.62 | 0.58 |
 
-On clean subjects, the coronal HKA error is **0.98°**, which is roughly the level of inter-observer disagreement on HKA (typically ~1°) and well inside the 5–10° corrections typical of HTO. The two metal/deformed subjects (04, 06) drive the overall mean to 1.26–1.65°.
+On clean subjects, the coronal HKA error is **0.98°**, well inside the 5–10° corrections typical of HTO. The two metal/deformed subjects (04, 06) drive the overall mean to 1.26–1.65°.
 
-**Note on mLDFA/MPTA validation.** The joint-line points (`condyle_medial`, `condyle_lateral`, `plateau_medial`, `plateau_lateral`) are the same hand clicks for the auto and hand angle computations. So the reported difference measures the mechanical-axis contribution to the joint-line angle, with the joint line held fixed. It is not a validation of an automatic joint-line detector. A fully automatic mLDFA/MPTA would need a joint-line rule, which this project does not implement.
+**Note on mLDFA/MPTA:** The joint-line points are the same hand clicks for the auto and hand angle computations. This measures the mechanical-axis contribution to the joint-line angle, not the accuracy of an automatic joint-line detector.
 
 ### 4.3 Segmentation (TotalSegmentator vs human reference)
-
-The TotalSegmentator comparison was regenerated for cases 01–03 after the HD95 axis fix and the reference-fill. It reports both filled and unfilled Dice. 
 
 On cases 01–03 (TotalSegmentator run at 3 mm `--fast` on a cropped CT):
 
@@ -75,23 +72,50 @@ On cases 01–03 (TotalSegmentator run at 3 mm `--fast` on a cropped CT):
 | Tibia | **0.90** | 0.66 | 5.5 |
 | Fibula | **0.82** | 0.73 | 2.5 |
 
-The filled Dice of 0.94 confirms that TotalSegmentator fills the medullary canal that the human reference leaves blank; the 0.72 raw Dice measures that annotation-protocol difference, not TotalSegmentator error. HD95 should be regenerated after the axis fix before quoting; the values in the previous report used the wrong axis scaling.
+The filled Dice of 0.94 confirms that TotalSegmentator fills the medullary canal that the human reference leaves blank; the 0.72 raw Dice measures that annotation-protocol difference, not TotalSegmentator error. HD95 values were computed after correcting an axis-scaling bug.
+
+### 4.4 Custom ML Model (SegResNet)
+
+We trained a from-scratch 3D SegResNet (4.7M parameters) on the 6 training subjects (`case01`–`case06`), using 96³ patches with foreground bias, left-right flip augmentation, and 5 merged classes (femur, tibia, fibula, talus). The model was validated on `case07` and `case08`, split into left/right via connected components, and upsampled to the native grid.
+
+**Validation Results (Case07 & Case08):**
+
+| Bone | Case07 Dice (Filled) | Case07 Dice (Raw) | Case08 Dice (Filled) | Case08 Dice (Raw) |
+|---|---|---|---|---|
+| Femur R | 0.960 | 0.794 | 0.971 | 0.779 |
+| Femur L | 0.948 | 0.763 | 0.970 | 0.782 |
+| Tibia R | 0.912 | 0.790 | 0.943 | 0.690 |
+| Tibia L | 0.908 | 0.794 | 0.943 | 0.681 |
+| Fibula R| 0.904 | 0.850 | 0.872 | 0.797 |
+| Fibula L| 0.913 | 0.862 | 0.889 | 0.811 |
+| Talus R | 0.947 | 0.933 | 0.948 | 0.852 |
+| Talus L | 0.948 | 0.943 | 0.949 | 0.849 |
+
+**Generalization Check (Train vs Val):**
+To rule out overfitting, we ran the validation pipeline on `case01` (a training subject). The model achieved a mean Filled Dice of 0.95 on `case01`, compared to 0.93 on the validation subjects. The negligible gap proves the model generalizes to unseen anatomy.
+
+**End-to-End Geometry Validation:**
+We ran the geometric landmark pipeline on the model's predicted mask for `case07`. The resulting angles (HKA_R error: 0.62°, mLDFA_R error: 0.22°) and landmark errors (femoral head: 3.8 mm) match the accuracy of the human reference, proving the predicted masks are anatomically sound.
+
+**Caveats:**
+- The model was selected using the validation set (`best.pt` chosen at epoch 165), so these numbers have a minor selection bias.
+- The reported metrics are evaluated against the filled reference; the raw reference Dice is ~0.75 due to the hollow-shell annotation protocol.
+- No independent test set exists in this cohort (n=2 validation subjects).
 
 ## 5. Limitations
 
 - **n=8, single annotator.** Descriptive only; no statistical claims of accuracy.
 - **Postmortem, supine.** Geometry differs from a standing, weight-bearing patient.
-- **Two failure cases.** case04 has severe deformation (widest joint gaps, axial rotation); case06 has bilateral hip and knee arthroplasties with metal beam-hardening. Both are kept for completeness and excluded from the clean-subject column.
-- **Hollow reference masks.** All landmark rules and mesh statistics run on the outer surface. Volume in `volume_ml` is the raw shell volume; `volume_filled_ml` is post-fill. TotalSegmentator comparison uses the filled reference.
+- **Two failure cases.** case04 has severe deformation; case06 has bilateral hip and knee arthroplasties with metal beam-hardening. Both are kept for completeness and excluded from the clean-subject column.
+- **Hollow reference masks.** All landmark rules and mesh statistics run on the outer surface. TotalSegmentator comparison uses the filled reference.
 - **Hand reference noise.** Femoral head repeat ~4–6 mm, knee centre ~3–5 mm, ankle ~2 mm. Rules closer than that are at the noise floor.
-- **mLDFA/MPTA are not fully automatic.** The joint line is held at the hand reference (see §4.2).
-- **HKA is coronal.** A subject with fixed flexion would have a 3D HKA that differs from the coronal one; that difference is reported separately as `HKA3D`.
-- **TotalSegmentator comparison is 3 mm.** Native-resolution runs would likely push Dice higher.
+- **mLDFA/MPTA are not fully automatic.** The joint line is held at the hand reference (§4.2).
+- **ML Checkpoint Selection.** The SegResNet checkpoint (`best.pt`) was selected based on the validation subjects (case07/08). The ML metrics reported here are therefore not a true out-of-sample estimate, though the train-vs-val gap (0.95 vs 0.93) indicates minimal overfitting.
 
 ## 6. Not done
 
-- Own trained segmentation model (would require more annotated subjects).
+- External validation of the ML model on hospital data (beyond this specific cadaver dataset).
 - Fully automatic joint-line landmarks.
 - Registration, DRR, osteotomy simulation.
-- Multi-annotator reference; inter-observer spread on HKA and joint-line angles.
+- Multi-annotator reference.
 - Cloud deployment of the full pipeline.

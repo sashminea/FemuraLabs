@@ -15,7 +15,7 @@ To ensure reproducibility, here is the exact mapping between our internal `caseX
 
 | Internal ID | Zenodo Zip | Subject ID (Patient) | Layout Type | Notes |
 |---|---|---|---|---|
-| `case01` | `006.zip` | `051Y.F.CT.168` | Lower-Limb | Clean single volume. Baseline subject. |
+| `case01` | `006.zip` | `051Y.F.CT.168` | Lower-Limb | Clean single volume. |
 | `case02` | `023.zip` | `074Y.M.CT.521` | Lower-Limb | Clean single volume. |
 | `case03` | `014.zip` | `030Y.F.CT.547` | Lower-Limb | Clean single volume. |
 | `case04` | `z061.zip` | `039Y.F.CT.58316` | Full-Body | Upside-down, requires H5 transform. Missing talus mask. |
@@ -28,9 +28,9 @@ To ensure reproducibility, here is the exact mapping between our internal `caseX
 
 ## The Three Dataset Layouts
 
-The Zenodo record (8302449) is highly inconsistent. Subjects ship in one of three layouts. You must identify the layout before preparing the data.
+The Zenodo record is highly inconsistent. Subjects ship in one of three layouts. You must identify the layout before preparing the data.
 
-### Layout A: Standard Lower-Limb (e.g., case01, case02, case03)
+### Layout A: Standard Lower-Limb (e.g., case01–case03)
 These subjects ship with a single `SMIR.Lower_limb...nrrd` CT and separate `.seg.nrrd` files. The workflow is **Slicer export + Python merge**. 
 - **Pros:** Clean geometry.
 - **Cons:** Requires manual GUI clicking.
@@ -63,7 +63,7 @@ Regardless of the source layout, every `combined_seg.nii` must have exactly thes
 | 7 | Talus_R | — | 4 (or 6) |
 | 8 | Talus_L | — | 11 (or 8) |
 
-*Note: Source label numbers vary per subject (e.g., `Talus_R` might be label 4 or label 6 depending on the subject). The scripts read the `.labels.csv` (Layout A) or the `.seg.nrrd` metadata (Layout B) to map by **name**, not by hardcoded number.*
+*Note: Source label numbers vary per subject. The scripts read the `.labels.csv` (Layout A) or the `.seg.nrrd` metadata (Layout B) to map by **name**, not by hardcoded number.*
 
 ### Path A: Manual Slicer Export (Layout A)
 1. Open the full-limb `.nrrd` in Slicer.
@@ -93,11 +93,40 @@ print('femur_R x:', m['femur_R'].centroid_world[0])
 ```
 **Expected:** `femur_L x` is positive, `femur_R x` is negative. In LPS, the patient's left is +x. If both are positive, the geometry is shifted (Layout B centering failure). If the signs are swapped, the direction matrix is broken (RAS/LPS confusion).
 
+## Machine Learning Data Preparation
+
+To train the custom SegResNet, the high-resolution native CTs and the hollow reference masks must be standardized into a format suitable for 3D patch extraction.
+
+### 1. The Hollow Shell Problem
+The VSD reference segmentations are **cortical shells**; they do not annotate the medullary canal (the trabecular bone and marrow inside). Training a model on hollow masks teaches it to predict hollow bones. 
+
+Before saving any training data, we apply `fill_bone_interior()` to fill the enclosed background in each axial slice. This expands the femur volume by ~1.5× and ensures the model learns solid anatomy.
+
+### 2. Isotropic Resampling
+The native scans have varying voxel spacings:
+- In-plane: 0.88 mm to 1.27 mm
+- Z-axis: 0.5 mm to 0.7 mm
+
+To prevent the model from learning size invariance from only 6 subjects, `prepare_dataset.py` resamples everything to **1.5 mm isotropic**. At 1.5 mm, the volumes are small enough to fit comfortably in RAM (~380 M voxels total) and the patch size (96³) spans 144 mm, which comfortably covers the distal femur (~75-95 mm wide).
+
+### 3. The `.npy` Format
+The data is saved as per-case `.npy` files (`caseXX_ct.npy` and `caseXX_seg.npy`):
+- **CT**: `int16`, raw Hounsfield Units (HU). Storing as `int16` halves the file size and allows flexible normalization on-the-fly during training.
+- **Seg**: `uint8`, the 8 original labels (sides *not* merged).
+
+The manifest file (`scripts/ml/manifest.json`) defines the paths.
+
+Run the preparation script:
+```bash
+PYTHONPATH=src python scripts/ml/prepare_dataset.py --manifest scripts/ml/manifest.json
+```
+Outputs go to `data/ml_npy/`, which is later zipped and uploaded to Kaggle for training.
+
 ## Traps Worth Remembering
 
 - **`.seg.nrrd` is not a simple labelmap.** Slicer uses it to store a complex scene (segment names, colors, geometries). SimpleITK reads it as a scalar array. Use NIfTI for the pipeline.
-- **The Source Volume dropdown does not resample.** You *must* click the **Segment Geometry** icon in Segment Editor before exporting. If you skip it, Slicer exports a 252x154x1426 crop instead of the 512x512x3272 full grid.
+- **The Source Volume dropdown does not resample.** You *must* click the **Segment Geometry** icon in Segment Editor before exporting. If you skip it, Slicer exports a crop instead of the full grid.
 - **Slicer drops the H5 transform on export.** For full-body scans, never use Slicer to export segmentations. The H5 translation is lost, leaving you with `origin=(0,0,0)`. Use `process_full_body_raw.py` instead.
 - **Slicer shows RAS, SimpleITK shows LPS.** Slicer's coordinate display negates X and Y relative to SimpleITK. Do not "fix" the sign in your code to match Slicer.
 - **Metal Artifacts break the sphere fit.** Subjects with total hip/knee replacements (e.g., `case06`) cause beam hardening. The segmentations shatter, and `femoral_head_centre` fails (errors > 30 mm). The pipeline does not crash, but the angles for that subject are invalid.
-- **`data/` is strictly gitignored.** Never commit raw arrays, `.nii` files, or the 3.4 GB CTs. The repo tracks only the scripts that produce them.
+- **`data/` is strictly gitignored.** Never commit raw arrays, `.nii` files, or the `.npy` training data. The repo tracks only the scripts that produce them.

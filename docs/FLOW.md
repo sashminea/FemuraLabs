@@ -25,6 +25,18 @@ white-dashed = file on disk, grey = external.
 
 ---
 
+## Machine Learning: SegResNet training and validation
+
+<img src="flow/ml-segresnet-pipeline.png" alt="Machine Learning: SegResNet training and validation">
+
+prepare_dataset.py resamples raw CTs and masks to 1.5 mm isotropic, fills the medullary canal, and saves them as .npy files. train.py uses a PatchSampler for random 96^3 crops, applies HU normalization and augmentation, and trains a 3D SegResNet using DiceCELoss. The best checkpoint is saved. validate.py runs sliding-window inference, splits merged left/right classes using connected components, upsamples back to the native grid, and computes Dice/HD95.
+
+---
+
+<!-- INSERT HERE -->
+
+---
+
 ## Alignment: HKA deviation and MAD from three points
 
 <img src="flow/alignment-hka-mad.png" alt="Alignment: HKA deviation and MAD from three points">
@@ -41,10 +53,6 @@ knee_centre uses the bounding box of a +15 mm axial femur slab with fitted later
 
 ---
 
-<!-- INSERT HERE -->
-
-
----
 
 ## Landmarks: three automatic rules from mesh vertices
 
