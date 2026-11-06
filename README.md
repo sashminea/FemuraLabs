@@ -82,6 +82,8 @@ We also trained a from-scratch 3D SegResNet (4.7M parameters) on the 6 training 
 
 The model generalizes cleanly: its Dice on the training subjects (0.95) matches its Dice on the validation subjects (0.93). Running the geometric landmark pipeline on the model's *predicted* masks yields HKA errors of 0.6°, proving the segmentations are anatomically accurate, not just spatially overlapping.
 
+The full training run, including the custom patch sampler, the MONAI SegResNet, and the validation pipeline, is available as a public Kaggle Notebook: **[femuralabs on Kaggle](https://www.kaggle.com/code/sashmin/femuralabs)**.
+
 ## Getting started
 
 You can install the project and run its test suite without downloading any CT data, which is the quickest way to check that everything is set up properly on your machine.

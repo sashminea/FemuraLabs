@@ -346,6 +346,16 @@ PYTHONPATH=src:scripts/ml python scripts/ml/validate.py \
 
 This script splits the merged left/right classes, upsamples to the native grid, and computes Dice/HD95. The output JSONs are automatically picked up by `make_report_tables.py`.
 
+### 8.4 Kaggle Resources
+
+The data preparation, training, and validation workflow is documented above, but the exact environment used to train the model is preserved on Kaggle for reproducibility:
+
+- **Kaggle Notebook (Training & Validation):** [femuralabs on Kaggle](https://www.kaggle.com/code/sashmin/femuralabs)
+- **Prepared `.npy` Data (1.5 mm isotropic):** [femuralabs-ml-data](https://www.kaggle.com/datasets/sashmin/femuralabs-ml-data)
+- **Training Scripts (`train.py`, `common.py`, `validate.py`):** [femuralabs-ml-scripts](https://www.kaggle.com/datasets/sashmin/femuralabs-ml-scripts)
+
+If you want to reproduce the training without running the local `prepare_dataset.py` step, attach the two datasets to a Kaggle Notebook, enable a T4 GPU and Internet, and run the cells in the notebook.
+
 ---
 
 ## 9. Docker container
