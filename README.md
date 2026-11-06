@@ -38,7 +38,7 @@ The pipeline was run on **8 cadaveric subjects** from the [VSDFullBodyBoneRecons
 
 *\*Cases 04 and 06 fail at 26–36 mm (deformation, metal), and are excluded from the clean column.*
 
-The femoral head sphere fit is inside the hand repeat distance on clean anatomy. The knee centre rule is within 5 mm on 11 of 16 knees; the previous rule failed at 25 mm on cases with tilted condyles.
+The femoral head sphere fit is inside the hand repeat distance on clean anatomy. The knee centre rule is within 5 mm on 11 of 16 knees.
 
 ### Alignment angles
 
