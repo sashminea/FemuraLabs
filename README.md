@@ -57,7 +57,7 @@ Full per-case tables and the section-by-section limitations are in [`reports/val
 
 ### Segmentation (TotalSegmentator vs human reference)
 
-The reference masks are cortical shells (medullary canal unannotated), so TotalSegmentator naturally fills the interior volume that the human did not. On cases 01–03 (TotalSegmentator run at 3 mm `--fast` on a cropped CT):
+The reference masks are cortical shells (medullary canal unannotated), so TotalSegmentator naturally fills the interior volume that the human did not.
 
 | Bone | Mean Dice (filled ref) | Mean Dice (unfilled ref) | Mean HD95 (mm) |
 |---|---|---|---|
@@ -65,6 +65,7 @@ The reference masks are cortical shells (medullary canal unannotated), so TotalS
 | Tibia | **0.90** | 0.66 | 5.5 |
 | Fibula | **0.82** | 0.73 | 2.5 |
 
+TotalSegmentator was run at 3 mm `--fast` on cropped CT(s):
 The filled Dice of 0.94 is the honest outer-surface agreement; the raw 0.72 measures the annotation-protocol difference (hollow vs solid).
 
 ## Getting started
