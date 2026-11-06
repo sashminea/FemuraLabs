@@ -1,32 +1,50 @@
 {
   "femur_R": {
-    "dice": 0.941,
-    "dice_unfilled": 0.707,
-    "hd95_mm": 5.86
+    "dice": 0.968,
+    "hd95_mm": 6.25,
+    "dice_unfilled": 0.733,
+    "hd95_unfilled_mm": 7.86
   },
   "femur_L": {
-    "dice": 0.938,
-    "dice_unfilled": 0.673,
-    "hd95_mm": 3.91
+    "dice": 0.967,
+    "hd95_mm": 3.73,
+    "dice_unfilled": 0.699,
+    "hd95_unfilled_mm": 6.94
   },
   "tibia_R": {
-    "dice": 0.923,
-    "dice_unfilled": 0.669,
-    "hd95_mm": 3.52
+    "dice": 0.958,
+    "hd95_mm": 1.4,
+    "dice_unfilled": 0.714,
+    "hd95_unfilled_mm": 5.94
   },
   "tibia_L": {
-    "dice": 0.93,
-    "dice_unfilled": 0.63,
-    "hd95_mm": 4.42
+    "dice": 0.959,
+    "hd95_mm": 1.4,
+    "dice_unfilled": 0.678,
+    "hd95_unfilled_mm": 5.31
   },
   "fibula_R": {
-    "dice": 0.841,
-    "dice_unfilled": 0.739,
-    "hd95_mm": 2.18
+    "dice": 0.932,
+    "hd95_mm": 0.98,
+    "dice_unfilled": 0.833,
+    "hd95_unfilled_mm": 2.76
   },
   "fibula_L": {
-    "dice": 0.855,
-    "dice_unfilled": 0.722,
-    "hd95_mm": 2.18
+    "dice": 0.931,
+    "hd95_mm": 0.98,
+    "dice_unfilled": 0.805,
+    "hd95_unfilled_mm": 2.76
+  },
+  "talus_R": {
+    "dice": 0.946,
+    "hd95_mm": 1.55,
+    "dice_unfilled": 0.889,
+    "hd95_unfilled_mm": 6.29
+  },
+  "talus_L": {
+    "dice": 0.932,
+    "hd95_mm": 2.4,
+    "dice_unfilled": 0.864,
+    "hd95_unfilled_mm": 6.27
   }
 }

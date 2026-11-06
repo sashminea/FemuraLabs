@@ -30,7 +30,6 @@ def split_sides(merged_seg: np.ndarray, meta: dict) -> np.ndarray:
     """Split 1=femur, 2=tibia, 3=fibula, 4=talus into 8 labels using X-position."""
     final_seg = np.zeros_like(merged_seg, dtype=np.uint8)
     
-    # Find the array X index where physical X = 0
     ox, oy, oz = meta["resampled"]["origin"]
     sx, sy, sz = meta["resampled"]["spacing"]
     x_mid_idx = int(round((0 - ox) / sx))
@@ -41,17 +40,44 @@ def split_sides(merged_seg: np.ndarray, meta: dict) -> np.ndarray:
             continue
         
         lab, n = ndi.label(mask)
+        if n == 0:
+            continue
+            
+        sizes = np.bincount(lab.ravel())
+        
+        # Find the largest component on the right (cx < mid) and left (cx >= mid)
+        best_R, best_L = None, None
+        max_size_R, max_size_L = 0, 0
+        
         for i in range(1, n + 1):
             comp = lab == i
             _, _, cx = ndi.center_of_mass(comp)
             
-            # LPS: Right side is negative X (cx < x_mid_idx)
             if cx < x_mid_idx:
-                final_seg[comp] = (c - 1) * 2 + 1  # R label
+                if sizes[i] > max_size_R:
+                    max_size_R = sizes[i]
+                    best_R = comp
             else:
-                final_seg[comp] = (c - 1) * 2 + 2  # L label
+                if sizes[i] > max_size_L:
+                    max_size_L = sizes[i]
+                    best_L = comp
+                    
+        if best_R is not None:
+            final_seg[best_R] = (c - 1) * 2 + 1  # R label
+        if best_L is not None:
+            final_seg[best_L] = (c - 1) * 2 + 2  # L label
                 
     return final_seg
+
+
+def keep_largest_component(mask: np.ndarray) -> np.ndarray:
+    """Keep only the largest connected component of a boolean mask."""
+    lab, n = ndi.label(mask)
+    if n <= 1:
+        return mask
+    sizes = np.bincount(lab.ravel())
+    # Index 0 is background, so find argmax starting from 1
+    return lab == (np.argmax(sizes[1:]) + 1)
 
 
 def upsample_to_native(pred_resampled: np.ndarray, meta: dict, native_img: sitk.Image) -> np.ndarray:
@@ -113,23 +139,37 @@ def main():
         native_arr = sitk.GetArrayFromImage(native_img)
         pred_native = upsample_to_native(pred_rs, meta, native_img)
 
-        # 4. Compute metrics against filled native reference
+        # 4. Compute metrics against BOTH raw and filled native reference
         print(f"  Computing metrics (native spacing: {native_img.GetSpacing()})...")
         case_results = {}
         
-        for label in range(1, 7):  # Skip talus (labels 7,8) to match compare_segmentations.py
+        for label in range(1, 9):  # Include talus (labels 7, 8)
             bone = LABEL_NAMES_8[label]
-            ref_mask = fill_bone_interior(native_arr == label)
+            
+            # Reference masks (raw and filled)
+            ref_raw = native_arr == label
+            ref_filled = keep_largest_component(fill_bone_interior(ref_raw))
             pred_mask = pred_native == label
             
-            if not ref_mask.any() and not pred_mask.any():
+            if not ref_filled.any() and not pred_mask.any():
                 continue
                 
-            d = dice_score(ref_mask, pred_mask)
-            h = hd95(ref_mask, pred_mask, spacing=native_img.GetSpacing())
+            # Metrics vs filled reference
+            d_filled = dice_score(ref_filled, pred_mask)
+            h_filled = hd95(ref_filled, pred_mask, spacing=native_img.GetSpacing())
             
-            print(f"  {bone:<10} | Dice: {d:.3f} | HD95: {h:>5.2f} mm")
-            case_results[bone] = {"dice": round(d, 3), "hd95_mm": round(h, 2)}
+            # Metrics vs raw reference
+            d_raw = dice_score(ref_raw, pred_mask)
+            h_raw = hd95(ref_raw, pred_mask, spacing=native_img.GetSpacing())
+            
+            print(f"  {bone:<10} | Dice(filled): {d_filled:.3f} | Dice(raw): {d_raw:.3f} | HD95(filled): {h_filled:>5.2f} mm")
+            
+            case_results[bone] = {
+                "dice": round(d_filled, 3), 
+                "hd95_mm": round(h_filled, 2),
+                "dice_unfilled": round(d_raw, 3),
+                "hd95_unfilled_mm": round(h_raw, 2)
+            }
 
         results[case] = case_results
         

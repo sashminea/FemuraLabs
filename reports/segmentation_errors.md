@@ -20,3 +20,15 @@
 | case03 | tibia_L | 0.871 | 0.673 | 4.51 |
 | case03 | fibula_R | 0.794 | 0.730 | 2.71 |
 | case03 | fibula_L | 0.795 | 0.717 | 2.56 |
+| case07 | femur_R | 0.960 | n/a | 2.14 |
+| case07 | femur_L | 0.948 | n/a | 3.38 |
+| case07 | tibia_R | 0.912 | n/a | 4.50 |
+| case07 | tibia_L | 0.908 | n/a | 4.28 |
+| case07 | fibula_R | 0.904 | n/a | 2.14 |
+| case07 | fibula_L | 0.913 | n/a | 1.18 |
+| case08 | femur_R | 0.971 | n/a | 1.27 |
+| case08 | femur_L | 0.970 | n/a | 1.27 |
+| case08 | tibia_R | 0.943 | n/a | 2.80 |
+| case08 | tibia_L | 0.943 | n/a | 1.97 |
+| case08 | fibula_R | 0.872 | n/a | 1.27 |
+| case08 | fibula_L | 0.889 | n/a | 1.27 |
