@@ -9,3 +9,4 @@ runs/output/
 /data/
 /output/
 /runs/
+*.egg-info/
