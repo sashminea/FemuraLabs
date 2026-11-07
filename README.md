@@ -8,9 +8,7 @@ Lower-limb malalignment is one of the main drivers of osteoarthritis. When a leg
 
 FemuraLabs automates the geometric part of that work. It starts from a lower-limb CT volume together with bone segmentation masks, rebuilds the femur, tibia, fibula and talus as watertight 3D surfaces in real millimetres, and then finds the hip, knee and ankle centres directly from the shape of those surfaces. From those three centres it computes the mechanical axes and the alignment angles a surgeon would ask for (HKA, plus the knee joint-line angles mLDFA and MPTA). Every automatic result is compared against landmarks placed by hand, so you can see for yourself how close the automatic rules actually get to what a person would do.
 
-The project also includes a fully functional from-scratch 3D segmentation model (SegResNet) that can generate these masks automatically from raw CT.
-
-The goal is a reproducible foundation for data-driven orthopaedic planning and biomechanical simulation, one that connects raw clinical imaging to numbers you can inspect and question, rather than a finished clinical tool.
+The project also includes a fully functional from-scratch 3D segmentation model (SegResNet) that can generate these masks automatically from raw CT. The entire pipeline, from data preparation to model validation, is accessible through a unified, professional command-line interface.
 
 ## How the pipeline works
 
@@ -86,7 +84,7 @@ The full training run, including the custom patch sampler, the MONAI SegResNet, 
 
 ## Getting started
 
-You can install the project and run its test suite without downloading any CT data, which is the quickest way to check that everything is set up properly on your machine.
+FemuraLabs ships with a unified command-line interface. You can install the package in editable mode to access the `femuralabs` command globally, and run the test suite without downloading any data.
 
 ```bash
 git clone https://github.com/sashminea/FemuraLabs.git
@@ -97,58 +95,121 @@ source .venv/bin/activate        # on Windows: .venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 
-pytest -q                        # runs the test suite
+# Install the CLI
+pip install -e .
+
+# Verify everything is working
+femuralabs doctor check
+pytest -q
 ```
 
-The repository also contains a Dockerfile that packages the full geometry pipeline. You can run the pipeline on a synthetic test volume without installing SimpleITK, scikit-image, or any other dependencies on your host machine:
+The repository also contains a Dockerfile that packages the CLI and the geometry pipeline:
 
 ```bash
 docker build -t femuralabs-tool .
-docker run --rm femuralabs-tool
+docker run --rm femuralabs-tool --help
 ```
-
-This will generate a synthetic 8-bone volume, run the full pipeline (masks → meshes → JSON), and output the results inside the container.
-
-Running the real pipeline needs data, annotation work and a few scripts, and that is what the next section walks through.
 
 ## Reproducing the validation
 
-Reproducing the results from scratch means getting the dataset, preparing the segmentations, placing reference landmarks by hand, and then letting the scripts do the rest. The four steps below follow that order, and each one points to the part of the documentation that has the full detail.
+Reproducing the results from scratch means getting the dataset, preparing the segmentations, placing reference landmarks by hand, and then letting the CLI do the rest. The four steps below follow that order.
 
 ### 1. Data and segmentation merging
 
-The pipeline reads a single multi-label NIfTI file called `combined_seg.nii`, in which every bone has its own label: `femur_R`, `femur_L`, `tibia_R`, `tibia_L`, `fibula_R`, `fibula_L`, `talus_R` and `talus_L`. The dataset does not ship that way. It ships in two distinct layouts, and we have automated both paths.
+The dataset does not ship as a single multi-label NIfTI. It ships in two distinct layouts, and we have automated both paths.
 
-- **Standard Lower-Limb**: These ship with clean full-limb CTs. The segmentations are resampled onto the CT grid in Slicer and merged using `scripts/data/merge_segmentation.py`.
-- **Full-Body Upside-Down**: These ship as full-body CTs with separate segmentations and an H5 transform file. We use `scripts/data/process_full_body_raw.py` to apply the H5 transform mathematically, extract the lower limb, combine the masks, and center the patient at X=0. This bypasses Slicer's geometry export bugs and WSL memory limits entirely.
-
-[`docs/data.md`](docs/data.md) describes the datasets, their licences, the label mappings, and the split-volume case in detail.
+- **Standard Lower-Limb**: Resample the segmentations onto the CT grid in Slicer and merge them.
+  ```bash
+  femuralabs data merge --thighs path/to/thighs.nii --shanks path/to/shanks.nii --out data/raw/caseXX/combined_seg.nii
+  ```
+- **Full-Body Upside-Down**: These ship as full-body CTs with separate segmentations and an H5 transform file. The CLI applies the H5 transform mathematically, extracts the lower limb, combines the masks, and centers the patient at X=0.
+  ```bash
+  femuralabs data preprocess \
+    --ct path/to/SMIR.Body.nii \
+    --thighs-seg path/to/Pelvis-Thighs.seg.nrrd \
+    --shanks-seg path/to/Shanks-Feet.seg.nrrd \
+    --transform path/to/Transform-Upside-Down.h5 \
+    --out-dir data/raw/caseXX
+  ```
 
 ### 2. Manual landmark annotation
 
-To judge the automatic rules there has to be a human reference to compare them with, so each subject needs ten landmarks placed by hand in Slicer and saved as a `.mrk.json` file in `data/ref/`. The click-by-click instructions, with annotated screenshots and the anatomical definition of every landmark, are in the placement guide in [`docs/landmarks.md`](docs/landmarks.md). Please read the section on pitfalls in that file before you place anything. The most important one is that Slicer's axial view follows radiological convention, so the patient's right side appears on the left of the screen, and labelling by screen position produces a perfectly plausible but completely mirrored result.
-
-Once the file is saved, run the diagnostic scripts in the appendix of [`docs/runbook.md`](docs/runbook.md). They confirm that right-side landmarks have negative x and left-side landmarks positive x in LPS, and that the points actually rest on the bone masks.
+To judge the automatic rules there has to be a human reference. Each subject needs ten landmarks placed by hand in Slicer and saved as a `.mrk.json` file in `data/ref/`. The click-by-click instructions, with annotated screenshots and the anatomical definition of every landmark, are in the placement guide in [`docs/landmarks.md`](docs/landmarks.md).
 
 ### 3. Running the geometry pipeline
 
 When `combined_seg.nii` and the landmark files are in the `data/` directory, one command processes every case:
 
 ```bash
-PYTHONPATH=src python scripts/pipeline/run_all_cases.py
+femuralabs pipeline batch
 ```
 
-For each case this extracts the bone masks, writes the STL meshes, computes the automatic landmarks and the alignment angles, and saves everything to `output/<case>/summary.json`. Bones are meshed one at a time and memory is released in between, keeping peak memory around 3 GB even on the largest scans.
+For each case this extracts the bone masks, writes the STL meshes, computes the automatic landmarks and the alignment angles, and saves everything to `output/<case>/summary.json`. To run a single case:
+
+```bash
+femuralabs pipeline run \
+  --case data/raw/case07/combined_seg.nii \
+  --out output/case07 \
+  --compare data/ref/landmarks_case07.mrk.json \
+  --angles \
+  --fill
+```
 
 ### 4. Generating the reports
 
 The last step turns the JSON summaries into the tables you see in the results above:
 
 ```bash
-python scripts/pipeline/make_report_tables.py
+femuralabs pipeline report
 ```
 
-This writes [`reports/landmark_errors.md`](reports/landmark_errors.md) and [`reports/angles_case.md`](reports/angles_case.md). The tables are generated from the pipeline output on purpose, to rule out transcription mistakes, but it also means they can go stale: after any run that changes a result, run this script again.
+This writes [`reports/landmark_errors.md`](reports/landmark_errors.md) and [`reports/angles_case.md`](reports/angles_case.md). The tables are generated from the pipeline output on purpose, to rule out transcription mistakes.
+
+## Training the ML Model
+
+The ML pipeline is fully integrated into the CLI.
+
+### 1. Prepare the 1.5mm `.npy` volumes
+```bash
+femuralabs ml prepare --out-dir data/ml_npy
+```
+
+### 2. Train the SegResNet
+*(Note: Training requires a GPU. We recommend running this via the provided [Kaggle Notebook](https://www.kaggle.com/code/sashmin/femuralabs), but the CLI supports local training if you have CUDA).*
+```bash
+femuralabs ml train \
+  --data-dir data/ml_npy \
+  --out-dir runs/run1 \
+  --patch 96 \
+  --batch-size 2 \
+  --epochs 200
+```
+
+### 3. Validate the model
+Run sliding-window inference on the validation subjects and compute Dice/HD95:
+```bash
+femuralabs ml validate \
+  --checkpoint runs/run1/best.pt \
+  --data-dir data/ml_npy \
+  --val-cases case07,case08
+```
+
+### 4. Use the model on a new scan
+You can download the pre-trained weights directly from our GitHub Release. The CLI handles the download and extraction automatically:
+
+```bash
+femuralabs ml download-weights
+```
+
+Once downloaded, you can generate a segmentation for any raw CT. The CLI automatically uses the downloaded weights by default:
+
+```bash
+femuralabs ml infer \
+  --ct path/to/new_scan.nii \
+  --out data/raw/caseXX/combined_seg.nii
+```
+
+This runs sliding-window inference, splits the left/right sides, and upsamples back to the native grid. The resulting `combined_seg.nii` can then be fed directly into `femuralabs pipeline run` for 3D mesh generation and angle computation.
 
 ## Repository layout
 
@@ -156,15 +217,10 @@ The repository is organised so that the code, the documentation and the generate
 
 ```text
 FemuraLabs/
-├── src/femuralabs/toolkit/   # Core Python library
-│   ├── fileio/               # Volume, landmark, and JSON I/O
-│   ├── imaging/              # Masks, meshes, arrays, and volume geometry
-│   ├── geometry/             # Landmarks, alignment angles, stats, and metrics
-│   ├── reporting/            # Decision logic, JSON writer, summary generator
-│   ├── service/              # HTTP API (routes, api, serve)
-│   ├── training/             # PyTorch model and training utilities
-│   └── cli.py                # Command-line interface for volume geometry
-├── scripts/                  # Executable pipeline entry points
+├── src/femuralabs/
+│   ├── cli/                  # Unified Typer CLI (data, pipeline, ml, doctor)
+│   └── toolkit/              # Core Python library (I/O, geometry, imaging, ML)
+├── scripts/                  # Executable scripts called by the CLI
 │   ├── data/                 # Merge segmentations, process full-body scans
 │   ├── ml/                   # Data prep, SegResNet training, validation
 │   ├── pipeline/             # Run cases, compare, and generate reports
@@ -172,7 +228,8 @@ FemuraLabs/
 ├── tests/                    # Pytest suite
 ├── docs/                     # Engineering and scientific documentation
 ├── reports/                  # Generated validation tables and figures
-├── Dockerfile                # CPU-only tool container (synthetic demo)
+├── Dockerfile                # Tool container
+├── pyproject.toml            # Package definition and CLI entry point
 ├── requirements.txt          # Dev environment
 └── CITATION.cff              # Dataset, paper, and tool references
 ```

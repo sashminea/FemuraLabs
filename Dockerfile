@@ -1,23 +1,29 @@
 FROM python:3.12-slim
 
+# Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
-        PYTHONUNBUFFERED=1 \
-        PYTHONPATH=/app/src
+        PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Install dependencies
+# Install dependencies first (for Docker layer caching)
 COPY requirements-tool.txt .
 RUN pip install --no-cache-dir -r requirements-tool.txt
 
-# Create non-root user
+# Create non-root user for security
 RUN useradd --create-home student
 
-# Copy code and scripts
+# Copy the package definition, source code, and all scripts
+COPY pyproject.toml .
 COPY src/ src/
-COPY scripts/pipeline/ scripts/pipeline/
+COPY scripts/ scripts/
 
+# Install the local package (--no-deps because requirements are already installed).
+# This registers the `femuralabs` command globally.
+RUN pip install --no-cache-dir --no-deps .
+
+# Switch to the non-root user
 USER student
 
-# Run the synthetic demo by default
-CMD ["python", "scripts/pipeline/demo_synthetic.py"]
+# Default command: Show the CLI help menu
+CMD ["femuralabs", "--help"]
