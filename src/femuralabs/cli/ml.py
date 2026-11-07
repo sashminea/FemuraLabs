@@ -98,3 +98,44 @@ def infer(
         "--ct", str(ct), 
         "--out", str(out)
     ])
+
+@app.command()
+def cv(
+    data_dir: Path = typer.Option(..., help="Directory containing .npy files"),
+    out_dir: Path = typer.Option(Path("runs/cv"), help="Output directory for folds"),
+    epochs: int = typer.Option(100, help="Epochs per fold"),
+    patch: int = typer.Option(96, help="Patch size"),
+    batch_size: int = typer.Option(2, help="Batch size")
+):
+    """Run 4-fold cross-validation on the 8 subjects."""
+    folds = [
+        {"name": "fold1", "train": "case03,case04,case05,case06,case07,case08", "val": "case01,case02"},
+        {"name": "fold2", "train": "case01,case02,case05,case06,case07,case08", "val": "case03,case04"},
+        {"name": "fold3", "train": "case01,case02,case03,case04,case07,case08", "val": "case05,case06"},
+        {"name": "fold4", "train": "case01,case02,case03,case04,case05,case06", "val": "case07,case08"},
+    ]
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    for f in folds:
+        console.print(f"\n[bold cyan]Starting {f['name']} (Val: {f['val']})[/bold cyan]")
+        
+        # 1. Train
+        console.print(f"--- Training {f['name']} ---")
+        train_args = [
+            "--data-dir", str(data_dir), "--out", str(out_dir / f["name"]),
+            "--train-cases", f["train"], "--val-cases", f["val"],
+            "--patch", str(patch), "--batch-size", str(batch_size), "--epochs", str(epochs)
+        ]
+        run_script("scripts/ml/train.py", train_args)
+        
+        # 2. Validate
+        console.print(f"--- Validating {f['name']} ---")
+        val_args = [
+            "--checkpoint", str(out_dir / f["name"] / "best.pt"),
+            "--data-dir", str(data_dir), "--val-cases", f["val"],
+            "--out-dir", str(out_dir / f"{f['name']}_val")
+        ]
+        run_script("scripts/ml/validate.py", val_args)
+        
+        console.print(f"[bold green]Finished {f['name']}![/bold green]")
