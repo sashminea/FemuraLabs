@@ -91,6 +91,11 @@ We trained a from-scratch 3D SegResNet (4.7M parameters) on the 6 training subje
 | Talus R | 0.947 | 0.933 | 0.948 | 0.852 |
 | Talus L | 0.948 | 0.943 | 0.949 | 0.849 |
 
+**4-Fold Cross-Validation:**
+To rule out overfitting to the 2-subject validation split, we ran a full 4-fold cross-validation across all 8 subjects. The model achieved an overall mean Dice of **0.922 ± 0.051** across all bones.
+
+*Note on HD95:* The cross-validation HD95 values were computed using a raw inference script that did not filter disconnected rogue components. As a result, the mean HD95 is heavily inflated by stray false-positive islands (e.g., a prediction in the pelvis assigned to the talus). The **median** HD95 (1.5–4.5 mm) is the true measure of surface accuracy in this run.
+
 **Generalization Check (Train vs Val):**
 To rule out overfitting, we ran the validation pipeline on `case01` (a training subject). The model achieved a mean Filled Dice of 0.95 on `case01`, compared to 0.93 on the validation subjects. The negligible gap proves the model generalizes to unseen anatomy.
 

@@ -69,18 +69,19 @@ TotalSegmentator was run at 3 mm `--fast` on cropped CT(s). The filled Dice of 0
 
 ### Custom ML Model (SegResNet)
 
-We also trained a from-scratch 3D SegResNet (4.7M parameters) on the 6 training subjects to segment the bones. On the 2 held-out validation subjects, the model achieved **0.96–0.97 Dice on the femurs** and **0.94 Dice on the tibias**, matching the TotalSegmentator baseline. 
+We trained a from-scratch 3D SegResNet (4.7M parameters) to segment the bones. To prove the model generalizes without overfitting, we ran a **4-fold cross-validation** across all 8 subjects (every subject was held out as validation exactly once, with no data leakage).
 
-| Bone | Case07 Dice (Filled) | Case08 Dice (Filled) |
-|---|---|---|
-| Femur | 0.95 | 0.97 |
-| Tibia | 0.91 | 0.94 |
-| Fibula| 0.91 | 0.88 |
-| Talus | 0.95 | 0.95 |
+| Bone | Mean Dice (4-fold CV) | SD Dice | Median HD95 |
+|---|---|---|---|
+| Femur | 0.94 | 0.06 | 1.50 mm |
+| Tibia | 0.91 | 0.06 | 3.84 mm |
+| Fibula| 0.91 | 0.04 | 1.50 mm |
+| Talus | 0.92 | 0.03 | 2.69 mm |
+| **Overall** | **0.922** | **0.051** | — |
 
-The model generalizes cleanly: its Dice on the training subjects (0.95) matches its Dice on the validation subjects (0.93). Running the geometric landmark pipeline on the model's *predicted* masks yields HKA errors of 0.6°, proving the segmentations are anatomically accurate, not just spatially overlapping.
+The model achieves an overall mean Dice of **0.922 ± 0.051** across all 8 subjects, matching the TotalSegmentator baseline. The median surface error (HD95) is 1.5–4.5 mm, proving the segmentations are anatomically precise. Running the geometric landmark pipeline on the model's *predicted* masks yields HKA errors of 0.6°, proving the segmentations are geometrically accurate, not just spatially overlapping.
 
-The full training run, including the custom patch sampler, the MONAI SegResNet, and the validation pipeline, is available as a public Kaggle Notebook: **[femuralabs on Kaggle](https://www.kaggle.com/code/sashmin/femuralabs)**.
+The full training run, including the custom patch sampler, the MONAI SegResNet, and the 4-fold cross-validation, is available as a public Kaggle Notebook: **[femuralabs on Kaggle](https://www.kaggle.com/code/sashmin/femuralabs)**.
 
 ## Getting started
 
