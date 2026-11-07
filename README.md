@@ -1,6 +1,6 @@
 <img width="2873" height="852" alt="FemuraLabs banner" src="https://github.com/user-attachments/assets/41d18b7f-2fb5-4f52-b184-500358c6faa7" />
 
-![License: MIT](https://img.shields.io/badge/code-MIT-green)
+![License: Apache 2.0](https://img.shields.io/badge/code-Apache%202.0-blue)
 ![Status: research prototype](https://img.shields.io/badge/status-research%20prototype-orange)
 ![Not for clinical use](https://img.shields.io/badge/use-not%20for%20clinical%20use-red)
 
@@ -203,6 +203,18 @@ On the method side, the ankle rule uses the tibial plafond as a stand-in for the
 
 The custom SegResNet model was trained on 6 subjects and validated on 2. While its Dice matches the TotalSegmentator baseline, it has only been tested on this specific cadaver dataset. It was checkpoint-selected on the same 2 validation subjects, so the results may have a slight optimism bias. It should not be considered a generalisable clinical model until tested on external hospital data.
 
+## Attribution
+
+If you use FemuraLabs in your work (papers, products, or derivative tools), please credit the project and link back to the repository:
+
+> Built with or adapted from **FemuraLabs** (https://github.com/sashminea/FemuraLabs), licensed under Apache 2.0.
+
+The full attribution requirement is recorded in the [`NOTICE`](NOTICE) file. The Apache 2.0 licence covers the code, model, and documentation in this repository. The source CT data and reference segmentations remain under their original CC BY-NC-SA licences from the VSD dataset (see [`CITATION.cff`](CITATION.cff)).
+
 ## Data and licences
 
-FemuraLabs uses two Zenodo records, the [VSDFullBodyBoneReconstruction](https://doi.org/10.5281/zenodo.8302449) segmentations and surface models (CC BY-NC-SA 4.0) and the CT collection they were built from (CC BY-NC-SA 3.0 Switzerland, DOI [10.5281/zenodo.8270365](https://doi.org/10.5281/zenodo.8270365)). The data is not committed to this repository. The code is MIT-licensed, but the MIT licence does not cover the data, which stays under its own licences. If you use this work, please cite it with the details in `CITATION.cff`.
+FemuraLabs uses two Zenodo records, the [VSDFullBodyBoneReconstruction](https://doi.org/10.5281/zenodo.8302449) segmentations and surface models (CC BY-NC-SA 4.0) and the CT collection they were built from (CC BY-NC-SA 3.0 Switzerland, DOI [10.5281/zenodo.8270365](https://doi.org/10.5281/zenodo.8270365)). The data is not committed to this repository.
+
+The code is licensed under the **Apache License 2.0**, which requires that any use of the code, model, or documentation provide attribution to the FemuraLabs project (see `NOTICE`). This is not a copyleft license — you are free to use, modify, and redistribute the code, including commercially, as long as you preserve the copyright notice and the `NOTICE` file.
+
+The Apache 2.0 licence covers the **code** only. The **data** is not covered by this license and stays under its original CC BY-NC-SA licences from the VSD dataset. See `CITATION.cff` for the full citation metadata.

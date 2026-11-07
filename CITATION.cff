@@ -3,10 +3,11 @@ title: "FemuraLabs"
 message: "If you reuse the FemuraLabs pipeline, cite the source dataset below."
 version: "0.1.0"
 date-released: 2026-10-27
-license: MIT
+license: Apache-2.0
 type: software
 authors:
-  - name: "FemuraLabs"
+  - family-names: "Adhikari"
+    given-names: "Sashmin"
 preferred-citation:
   type: data
   title: "VSDFullBodyBoneReconstruction: Segmentations and surface models of bones of the entire lower body created from cadaver CT scans from the VSDFullBody collection"

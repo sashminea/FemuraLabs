@@ -1,0 +1,30 @@
+FemuraLabs
+Copyright 2026 Sashmin Adhikari
+https://github.com/sashminea/FemuraLabs
+
+This product includes software developed as part of the FemuraLabs
+project (the "Project").
+
+If you use, adapt, or redistribute any part of this codebase — source
+code, trained model weights, documentation, or figures — you must
+provide clear attribution to the Project and a working link back to
+the repository:
+
+    https://github.com/sashminea/FemuraLabs
+
+Attribution must appear in your project's README (or equivalent
+primary documentation) and, where applicable, in the product
+interface or publications. See the "Attribution" section of the
+project README for the recommended wording in different contexts.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at:
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+The Apache licence covers the code, model weights, and documentation
+in this repository only. It does not cover the source CT data or the
+reference segmentations, which remain under their original
+CC BY-NC-SA licences from the VSD dataset. See CITATION.cff for
+dataset attribution requirements.

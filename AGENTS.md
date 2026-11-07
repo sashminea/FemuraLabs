@@ -40,7 +40,7 @@ Read these before changing a design that seems wrong:
 - `docs/data.md` — dataset, licence, coverage, how to combine segmentations
 - `docs/FLOW.md` — cumulative annotated call graphs (newest first)
 - `CITATION.cff` — citations for dataset, paper, tools
-- `LICENSE` — code is MIT; data has its own licences
+- `LICENSE` — code is Apache 2.0 (see `NOTICE` for attribution); data has its own licences
 
 Every dataset, paper and tool is cited in `CITATION.cff`. Read each licence
 from its own record page, not from a secondary source.
