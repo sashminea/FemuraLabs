@@ -1,4 +1,5 @@
 import { DocsSidebar } from "@/components/layout/docs-sidebar";
+import { Pager } from "@/components/layout/pager";
 
 export default function DocsLayout({
   children,
@@ -10,6 +11,7 @@ export default function DocsLayout({
       <DocsSidebar />
       <main className="min-w-0 flex-1 py-8 sm:py-12 md:pl-12">
         {children}
+        <Pager />
       </main>
     </div>
   );
