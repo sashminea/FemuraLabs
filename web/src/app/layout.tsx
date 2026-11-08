@@ -18,6 +18,11 @@ export const metadata: Metadata = {
     title: site.title,
     description: site.description,
   },
+  twitter: {
+    card: "summary_large_image",
+    title: site.title,
+    description: site.description,
+  },
 };
 
 export default function RootLayout({

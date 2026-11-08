@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import { withOg } from "@/lib/og";
 import Link from "next/link";
 
 import { PageHeader } from "@/components/docs/page-header";
@@ -6,11 +6,11 @@ import { CodeBlock } from "@/components/ui/code-block";
 import { Note } from "@/components/ui/note";
 import { site } from "@/lib/site";
 
-export const metadata: Metadata = {
-  title: "Quickstart",
-  description:
-    "Install FemuraLabs, run SegResNet inference and the geometry pipeline.",
-};
+export const metadata = withOg(
+  "quickstart",
+  "Quickstart",
+  "Install FemuraLabs, run SegResNet inference and the geometry pipeline.",
+);
 
 export default function QuickstartPage() {
   return (

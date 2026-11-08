@@ -1,3 +1,4 @@
+import { withOg } from "@/lib/og";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -6,11 +7,11 @@ import { Note } from "@/components/ui/note";
 import { Table } from "@/components/ui/table";
 import { site } from "@/lib/site";
 
-export const metadata: Metadata = {
-  title: "Documentation",
-  description:
-    "Documentation for FemuraLabs, an open-source lower-limb CT analysis CLI and ML pipeline.",
-};
+export const metadata = withOg(
+  "docs",
+  "Documentation",
+  "Documentation for FemuraLabs, an open-source lower-limb CT analysis CLI and ML pipeline.",
+);
 
 const CARD_LINKS = [
   {

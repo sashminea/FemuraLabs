@@ -1,4 +1,15 @@
-import type { Metadata } from "next";
+import { withOg } from "@/lib/og";
+
+const base = withOg(
+  "landing",
+  "FemuraLabs — Lower-limb CT analysis",
+  "Segmentation, meshes and alignment angles from one command.",
+);
+
+export const metadata = {
+  ...base,
+  title: { absolute: "FemuraLabs — Lower-limb CT analysis" },
+};
 
 import { Bento } from "@/components/marketing/bento";
 import { CliTabs } from "@/components/marketing/cli-tabs";
@@ -11,10 +22,6 @@ import { Pipeline } from "@/components/marketing/pipeline";
 import { Problem } from "@/components/marketing/problem";
 import { Proof } from "@/components/marketing/proof";
 import { Stats } from "@/components/marketing/stats";
-
-export const metadata: Metadata = {
-  title: { absolute: "FemuraLabs — Lower-limb CT analysis" },
-};
 
 export default function LandingPage() {
   return (

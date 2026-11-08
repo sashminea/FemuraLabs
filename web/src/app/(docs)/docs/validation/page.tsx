@@ -1,15 +1,15 @@
-import type { Metadata } from "next";
+import { withOg } from "@/lib/og";
 
 import { PageHeader } from "@/components/docs/page-header";
 import { Bar } from "@/components/ui/bar";
 import { Note } from "@/components/ui/note";
 import { Table } from "@/components/ui/table";
 
-export const metadata: Metadata = {
-  title: "Validation report",
-  description:
-    "FemuraLabs validation: 4-fold cross-validation Dice for SegResNet, landmark errors and HKA, mLDFA and MPTA angle errors.",
-};
+export const metadata = withOg(
+  "validation",
+  "Validation report",
+  "FemuraLabs validation: 4-fold cross-validation Dice for SegResNet, landmark errors and HKA, mLDFA and MPTA angle errors.",
+);
 
 const CV_ROWS = [
   { bone: "Femur", dice: 0.94, sd: "0.06", hd95: "1.50 mm", pct: 94 },

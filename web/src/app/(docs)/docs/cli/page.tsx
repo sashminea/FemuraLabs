@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import { withOg } from "@/lib/og";
 
 import { CommandBlock } from "@/components/docs/command-block";
 import { PageHeader } from "@/components/docs/page-header";
@@ -6,11 +6,11 @@ import { CodeBlock } from "@/components/ui/code-block";
 import { Note } from "@/components/ui/note";
 import { Table } from "@/components/ui/table";
 
-export const metadata: Metadata = {
-  title: "CLI reference",
-  description:
-    "Reference for every femuralabs CLI command: doctor, data, pipeline, ml and volume.",
-};
+export const metadata = withOg(
+  "cli",
+  "CLI reference",
+  "Reference for every femuralabs CLI command: doctor, data, pipeline, ml and volume.",
+);
 
 const TOP_LEVEL: [string, string][] = [
   ["doctor", "Check system dependencies and environment."],

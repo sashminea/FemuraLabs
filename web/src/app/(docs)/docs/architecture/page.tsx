@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import { withOg } from "@/lib/og";
 import Link from "next/link";
 
 import { PageHeader } from "@/components/docs/page-header";
@@ -6,11 +6,11 @@ import { Note } from "@/components/ui/note";
 import { Table } from "@/components/ui/table";
 import { site } from "@/lib/site";
 
-export const metadata: Metadata = {
-  title: "How it works",
-  description:
-    "How FemuraLabs works: SegResNet segmentation, mesh extraction, geometry rules and alignment angles.",
-};
+export const metadata = withOg(
+  "architecture",
+  "How it works",
+  "How FemuraLabs works: SegResNet segmentation, mesh extraction, geometry rules and alignment angles.",
+);
 
 const FLOW = [
   { title: "CT volume", sub: "Real millimetres, LPS frame" },
