@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Reveal } from "@/components/ui/reveal";
 
-const TABS = ["Infer", "Docker", "Train", "Verify"];
+const TABS = ["Infer", "Docker", "Train", "Verify"] as const;
 
-const PANES = [
+type Line = { prompt: boolean; text: string };
+
+const PANES: Line[][] = [
   [
     { prompt: true, text: "femuralabs ml download-weights" },
     { prompt: true, text: "femuralabs ml infer --ct scan.nii --out combined_seg.nii" },
@@ -32,8 +34,50 @@ const PANES = [
   ],
 ];
 
+const DURATION_MS = 7000;
+
 export function CliTabs() {
   const [active, setActive] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const elapsedRef = useRef(0);
+  const rafRef = useRef(0);
+
+  const selectTab = (i: number) => {
+    setActive(i);
+    elapsedRef.current = 0;
+    setProgress(0);
+  };
+
+  useEffect(() => {
+    if (paused) return;
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let last = performance.now();
+    let cancelled = false;
+
+    const tick = (now: number) => {
+      if (cancelled) return;
+      const dt = Math.min(now - last, 100);
+      last = now;
+      elapsedRef.current += dt;
+      if (elapsedRef.current >= DURATION_MS) {
+        elapsedRef.current = 0;
+        setActive((a) => (a + 1) % TABS.length);
+        setProgress(0);
+      } else {
+        setProgress(elapsedRef.current / DURATION_MS);
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, [paused]);
 
   return (
     <section id="cli" className="py-24 md:py-32">
@@ -46,29 +90,44 @@ export function CliTabs() {
 
         <Reveal delay={80}>
           <div className="mt-14 grid items-start gap-8 md:grid-cols-[.8fr_1.4fr]">
-            <div className="flex flex-col md:flex-col">
-              {TABS.map((t, i) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setActive(i)}
-                  aria-selected={active === i}
-                  className={`border-t border-line py-5 text-left text-[clamp(1.3rem,2.4vw,2rem)] font-medium leading-tight tracking-[-0.04em] transition-[color,padding] duration-300 ${
-                    active === i ? "pl-3.5 text-tx" : "text-dim"
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
+            <div className="flex flex-col">
+              {TABS.map((t, i) => {
+                const isActive = active === i;
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => selectTab(i)}
+                    role="tab"
+                    aria-selected={isActive}
+                    className={`relative border-t border-line py-5 text-left text-[clamp(1.3rem,2.4vw,2rem)] font-medium leading-tight tracking-[-0.04em] transition-[color,padding] duration-300 ${
+                      isActive ? "pl-3.5 text-tx" : "text-dim hover:text-mut"
+                    }`}
+                  >
+                    {t}
+                    {isActive && (
+                      <span
+                        aria-hidden
+                        className="absolute -bottom-px left-0 h-px w-full origin-left bg-blue"
+                        style={{ transform: `scaleX(${progress})` }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-line bg-[rgba(7,8,9,0.8)]">
+            <div
+              onMouseEnter={() => setPaused(true)}
+              onMouseLeave={() => setPaused(false)}
+              className="overflow-hidden rounded-2xl border border-line bg-[rgba(7,8,9,0.8)]"
+            >
               <div className="flex gap-1.5 border-b border-line px-3.5 py-3">
                 <span className="h-2.5 w-2.5 rounded-full bg-white/[0.12]" />
                 <span className="h-2.5 w-2.5 rounded-full bg-white/[0.12]" />
                 <span className="h-2.5 w-2.5 rounded-full bg-white/[0.12]" />
               </div>
-              <pre className="overflow-x-auto px-5 py-5 font-mono text-[13.5px] leading-[1.7] text-tx">
+              <pre className="min-h-[200px] overflow-x-auto px-3 py-4 font-mono text-[11.5px] leading-[1.7] text-tx sm:px-5 sm:py-5 sm:text-[13.5px]">
                 {PANES[active].map((line, i) => (
                   <div key={i} className="whitespace-pre">
                     {line.prompt && <span className="text-green">$ </span>}
