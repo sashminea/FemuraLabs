@@ -35,7 +35,7 @@ export function Problem() {
           </Reveal>
           <Reveal delay={120}>
             <div className="pt-8 md:border-l md:border-line md:pl-8">
-              <h3 className="mb-4 bg-gradient-to-r from-tx to-blue bg-clip-text text-[clamp(1.8rem,3.4vw,2.8rem)] font-medium leading-none tracking-[-0.05em] text-transparent">
+              <h3 className="gradient-text-flow mb-4 text-[clamp(1.8rem,3.4vw,2.8rem)] font-medium leading-none tracking-[-0.05em]">
                 FemuraLabs
               </h3>
               <ul>
