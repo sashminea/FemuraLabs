@@ -1,0 +1,148 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0a0a0a;
+  --color-s1: #101113;
+  --color-s2: #15171a;
+  --color-tx: #ecebe6;
+  --color-mut: rgba(236, 235, 230, 0.6);
+  --color-dim: rgba(236, 235, 230, 0.38);
+  --color-blue: #4da3ff;
+  --color-green: #10b981;
+  --color-amber: rgba(255, 214, 140, 0.85);
+  --color-line: rgba(255, 255, 255, 0.08);
+  --color-line2: rgba(255, 255, 255, 0.2);
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas,
+    monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto,
+    sans-serif;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  scroll-padding-top: 88px;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-tx);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+/* --- Keyframes for animated sections --- */
+@keyframes marquee {
+  to { transform: translateX(calc(-50% - 1.75rem)); }
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(77, 163, 255, 0.55); }
+  50% { box-shadow: 0 0 0 12px rgba(77, 163, 255, 0); }
+}
+
+@keyframes sweep {
+  0% { transform: scaleY(0); }
+  45%, 100% { transform: scaleY(1); }
+}
+
+@keyframes scanline {
+  0% { transform: translateY(0); opacity: 1; }
+  45% { transform: translateY(420px); opacity: 1; }
+  46%, 100% { opacity: 0; }
+}
+
+@keyframes markappear {
+  0%, 88% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes landmark {
+  0%, 47% { opacity: 0; }
+  56%, 88% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes axisdraw {
+  0%, 48% { stroke-dashoffset: 1; opacity: 1; }
+  64%, 88% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+
+/* --- Documentation prose --- */
+.prose-docs h2 {
+  margin-top: clamp(3.5rem, 7vw, 6rem);
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--color-line);
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.055em;
+  text-wrap: balance;
+}
+.prose-docs h3 {
+  margin-top: 2.25rem;
+  font-size: 1.15rem;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  font-weight: 500;
+}
+.prose-docs p {
+  margin-top: 0.875rem;
+  color: var(--color-mut);
+  max-width: 66ch;
+}
+.prose-docs p b,
+.prose-docs li b {
+  color: var(--color-tx);
+  font-weight: 500;
+}
+.prose-docs ul,
+.prose-docs ol {
+  margin-top: 0.875rem;
+  padding-left: 1.25rem;
+  color: var(--color-mut);
+  max-width: 66ch;
+}
+.prose-docs ul { list-style: disc; }
+.prose-docs ol { list-style: decimal; }
+.prose-docs li { margin-top: 0.5rem; padding-left: 0.25rem; }
+.prose-docs li::marker { color: var(--color-dim); }
+.prose-docs p code,
+.prose-docs li code {
+  font: 13px var(--font-mono);
+  color: var(--color-tx);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  padding: 2px 6px;
+  overflow-wrap: anywhere;
+}
+.prose-docs a.l {
+  color: var(--color-tx);
+  border-bottom: 1px solid var(--color-line2);
+  transition: border-color 0.2s, color 0.2s;
+}
+.prose-docs a.l:hover {
+  color: var(--color-blue);
+  border-color: var(--color-blue);
+}
