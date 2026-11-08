@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { Search } from "@/components/layout/search";
 import { Button } from "@/components/ui/button";
 import { docsNav, marketingNav } from "@/lib/nav";
 import { site } from "@/lib/site";
@@ -36,7 +37,7 @@ export function Navbar() {
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-50 border-b border-line bg-bg/70 backdrop-blur-md">
-        <div className="mx-auto flex h-16 w-full max-w-7xl items-center gap-7 px-6">
+        <div className="mx-auto flex h-16 w-full max-w-7xl items-center gap-4 px-6 md:gap-7">
           <Link
             href="/"
             className="mr-auto text-xl font-medium tracking-tight text-tx"
@@ -61,10 +62,14 @@ export function Navbar() {
             })}
           </nav>
 
+          <Search />
+
           {!isDocs && (
-            <Button href="/docs" size="sm">
-              Read Docs
-            </Button>
+            <div className="hidden md:inline-flex">
+              <Button href="/docs" size="sm">
+                Read Docs
+              </Button>
+            </div>
           )}
 
           <a
