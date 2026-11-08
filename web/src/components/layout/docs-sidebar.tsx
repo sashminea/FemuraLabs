@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 
 import { docsConfig } from "@/lib/docs";
 
+const normalize = (p: string) => p.replace(/^\/+|\/+$/g, "");
+
 export function DocsSidebar() {
   const pathname = usePathname();
 
@@ -18,7 +20,7 @@ export function DocsSidebar() {
             </h3>
             <ul className="space-y-0.5">
               {group.items.map((item) => {
-                const active = pathname === item.href;
+                const active = normalize(pathname) === normalize(item.href);
                 return (
                   <li key={item.href}>
                     <Link

@@ -8,6 +8,13 @@ import { Button } from "@/components/ui/button";
 import { docsNav, marketingNav } from "@/lib/nav";
 import { site } from "@/lib/site";
 
+const normalize = (p: string) => p.replace(/^\/+|\/+$/g, "");
+
+function isActive(href: string, pathname: string): boolean {
+  if (href.includes("#")) return false;
+  return normalize(pathname) === normalize(href);
+}
+
 export function Navbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -39,9 +46,7 @@ export function Navbar() {
 
           <nav className="hidden gap-6 md:flex">
             {links.map((l) => {
-              const active =
-                pathname === l.href ||
-                (l.href !== "/" && !l.href.includes("#") && pathname.startsWith(l.href));
+              const active = isActive(l.href, pathname);
               return (
                 <Link
                   key={l.href}
@@ -87,15 +92,20 @@ export function Navbar() {
       {open && (
         <div className="fixed inset-x-0 top-16 bottom-0 z-40 overflow-y-auto bg-bg/95 backdrop-blur-lg md:hidden">
           <nav className="flex flex-col gap-1 p-6">
-            {links.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className="rounded-lg px-3 py-3 text-lg text-tx transition-colors hover:bg-white/5"
-              >
-                {l.name}
-              </Link>
-            ))}
+            {links.map((l) => {
+              const active = isActive(l.href, pathname);
+              return (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className={`rounded-lg px-3 py-3 text-lg transition-colors hover:bg-white/5 ${
+                    active ? "bg-white/5 text-tx" : "text-tx"
+                  }`}
+                >
+                  {l.name}
+                </Link>
+              );
+            })}
             {!isDocs && (
               <Link
                 href="/docs"
