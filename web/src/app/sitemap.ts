@@ -14,6 +14,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${site.url}/docs/quickstart/`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
     { url: `${site.url}/docs/cli/`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
     { url: `${site.url}/docs/architecture/`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${site.url}/docs/simulator/`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${site.url}/docs/validation/`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${site.url}/simulator/`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
   ];
 }

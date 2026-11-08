@@ -29,6 +29,13 @@ const CARD_LINKS = [
     external: false,
   },
   {
+    href: "/docs/simulator",
+    mono: "Interactive",
+    title: "Simulator",
+    desc: "How the HTO wedge simulator works and how to read its results.",
+    external: false,
+  },
+  {
     href: site.github,
     mono: "Source",
     title: "GitHub",
@@ -54,7 +61,7 @@ export default function DocsOverviewPage() {
         lead="An open-source Python CLI and ML pipeline for lower-limb CT. Go from a CT volume to bone masks, 3D meshes, joint centres and alignment angles with one tool."
       />
 
-      <div className="mt-12 grid gap-4 md:grid-cols-3">
+      <div className="mt-12 grid gap-4 md:grid-cols-2">
         {CARD_LINKS.map((c) => {
           const cls =
             "flex flex-col rounded-[20px] border border-line bg-s1 p-6 transition-colors hover:border-line2 hover:bg-s2";

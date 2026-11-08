@@ -5,6 +5,7 @@ export const marketingNav: NavLink[] = [
   { name: "Models", href: "/#bento" },
   { name: "Results", href: "/#proof" },
   { name: "CLI", href: "/#cli" },
+  { name: "Simulator", href: "/simulator" },
 ];
 
 export const docsNav: NavLink[] = [
@@ -13,4 +14,5 @@ export const docsNav: NavLink[] = [
   { name: "CLI", href: "/docs/cli" },
   { name: "Architecture", href: "/docs/architecture" },
   { name: "Validation", href: "/docs/validation" },
+  { name: "Simulator", href: "/docs/simulator" },
 ];

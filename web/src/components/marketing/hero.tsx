@@ -53,6 +53,9 @@ export function Hero() {
           <Button href="https://github.com/sashminea/FemuraLabs" variant="ghost" external>
             Get Started
           </Button>
+          <Button href="/simulator" variant="ghost">
+            Try the simulator
+          </Button>
         </div>
 
         <div className="mx-auto mt-12 max-w-xl overflow-hidden rounded-2xl border border-line bg-[rgba(7,8,9,0.8)] text-left backdrop-blur-md sm:mt-14 sm:max-w-2xl">

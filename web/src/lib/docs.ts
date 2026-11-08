@@ -66,6 +66,19 @@ export const docsConfig: DocsGroup[] = [
           { title: "Angles", href: "/docs/architecture#angles" },
         ],
       },
+      {
+        title: "Simulator",
+        href: "/docs/simulator",
+        anchors: [
+          { title: "What it models", href: "/docs/simulator#what" },
+          { title: "Controls", href: "/docs/simulator#controls" },
+          { title: "Reading the results", href: "/docs/simulator#results" },
+          { title: "Layers and the 3D view", href: "/docs/simulator#layers" },
+          { title: "Explainer", href: "/docs/simulator#explainer" },
+          { title: "Case data", href: "/docs/simulator#case" },
+          { title: "What it does not model", href: "/docs/simulator#limits" },
+        ],
+      },
     ],
   },
   {
