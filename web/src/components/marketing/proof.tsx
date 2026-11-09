@@ -28,7 +28,10 @@ export function Proof() {
         </Reveal>
 
         <Reveal delay={80}>
-          <div className="mt-14 overflow-x-auto rounded-[20px] border border-line bg-white/[0.03] px-5 py-3.5 backdrop-blur-md">
+          <div
+            data-cursor="card"
+            className="mt-14 overflow-x-auto rounded-[20px] border border-line bg-white/[0.03] px-5 py-3.5 backdrop-blur-md"
+          >
             <table className="w-full min-w-[480px] border-collapse">
               <thead>
                 <tr>

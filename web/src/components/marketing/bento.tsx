@@ -12,9 +12,11 @@ export function Bento() {
         </Reveal>
 
         <div className="mt-14 grid gap-4 md:grid-cols-10">
-          {/* SegResNet card */}
           <Reveal className="md:col-span-6">
-            <div className="flex h-full flex-col rounded-[20px] border border-line bg-[radial-gradient(90%_90%_at_100%_0%,rgba(77,163,255,0.16),transparent_60%),var(--color-s1)] p-6 md:p-9">
+            <div
+              data-cursor="card"
+              className="flex h-full flex-col rounded-[20px] border border-line bg-[radial-gradient(90%_90%_at_100%_0%,rgba(77,163,255,0.16),transparent_60%),var(--color-s1)] p-6 md:p-9"
+            >
               <h3 className="text-[1.3rem] font-medium leading-tight tracking-[-0.03em]">
                 A SegResNet written from scratch
               </h3>
@@ -38,9 +40,11 @@ export function Bento() {
             </div>
           </Reveal>
 
-          {/* Geometric precision card */}
           <Reveal delay={120} className="md:col-span-4">
-            <div className="flex h-full flex-col rounded-[20px] border border-line bg-s1 p-6 md:p-9">
+            <div
+              data-cursor="card"
+              className="flex h-full flex-col rounded-[20px] border border-line bg-s1 p-6 md:p-9"
+            >
               <h3 className="text-[1.3rem] font-medium leading-tight tracking-[-0.03em]">
                 Geometric precision
               </h3>
@@ -85,9 +89,11 @@ export function Bento() {
             </div>
           </Reveal>
 
-          {/* CLI card */}
           <Reveal delay={60} className="md:col-span-4">
-            <div className="flex h-full flex-col rounded-[20px] border border-line bg-s1 p-6 md:p-9">
+            <div
+              data-cursor="card"
+              className="flex h-full flex-col rounded-[20px] border border-line bg-s1 p-6 md:p-9"
+            >
               <h3 className="text-[1.3rem] font-medium leading-tight tracking-[-0.03em]">
                 Hours of Slicer work, one command
               </h3>
@@ -103,9 +109,11 @@ export function Bento() {
             </div>
           </Reveal>
 
-          {/* Open card */}
           <Reveal delay={180} className="md:col-span-6">
-            <div className="flex h-full flex-col rounded-[20px] border border-line bg-[linear-gradient(160deg,rgba(77,163,255,0.1),transparent_55%),var(--color-s1)] p-6 md:p-9">
+            <div
+              data-cursor="card"
+              className="flex h-full flex-col rounded-[20px] border border-line bg-[linear-gradient(160deg,rgba(77,163,255,0.1),transparent_55%),var(--color-s1)] p-6 md:p-9"
+            >
               <h3 className="text-[1.3rem] font-medium leading-tight tracking-[-0.03em]">
                 Open, containerised, reproducible
               </h3>

@@ -27,7 +27,11 @@ export function Limits() {
         <Reveal delay={80}>
           <div className="mt-12 grid gap-6 md:grid-cols-3 md:gap-10">
             {LIMITS.map((l) => (
-              <div key={l.title} className="border-t border-line2 pt-5">
+              <div
+                key={l.title}
+                data-cursor="text"
+                className="border-t border-line2 pt-5"
+              >
                 <h3 className="text-[1.1rem] font-medium tracking-[-0.03em]">{l.title}</h3>
                 <p className="mt-2 text-sm text-mut">{l.body}</p>
               </div>

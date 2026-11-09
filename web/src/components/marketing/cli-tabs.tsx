@@ -118,6 +118,7 @@ export function CliTabs() {
             </div>
 
             <div
+              data-cursor="card"
               onMouseEnter={() => setPaused(true)}
               onMouseLeave={() => setPaused(false)}
               className="overflow-hidden rounded-2xl border border-line bg-[rgba(7,8,9,0.8)]"

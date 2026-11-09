@@ -121,7 +121,10 @@ export function Pipeline() {
             { title: "Angles", sub: "HKA, mLDFA, MPTA" },
           ].map((node, i) => (
             <Reveal key={node.title} delay={i * 100}>
-              <div className="relative rounded-2xl border border-line bg-bg p-6 md:p-7">
+              <div
+                data-cursor="card"
+                className="relative rounded-2xl border border-line bg-bg p-6 md:p-7"
+              >
                 <h3 className="mb-1.5 text-[1.05rem] font-medium tracking-[-0.03em]">
                   {node.title}
                 </h3>
