@@ -14,6 +14,7 @@ export const metadata = {
 import { Bento } from "@/components/marketing/bento";
 import { CliTabs } from "@/components/marketing/cli-tabs";
 import { Cta } from "@/components/marketing/cta";
+import { CursorEffects } from "@/components/marketing/cursor-effects";
 import { Hero } from "@/components/marketing/hero";
 import { Limits } from "@/components/marketing/limits";
 import { Marquee } from "@/components/marketing/marquee";
@@ -26,6 +27,7 @@ import { Stats } from "@/components/marketing/stats";
 export default function LandingPage() {
   return (
     <>
+      <CursorEffects />
       <Hero />
       <Marquee />
       <Stats />

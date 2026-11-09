@@ -3,7 +3,7 @@ import { Reveal } from "@/components/ui/reveal";
 
 export function Stats() {
   return (
-    <section className="py-0">
+    <section id="stats" className="py-0">
       <div className="mx-auto max-w-7xl px-6">
         <Reveal>
           <div className="grid grid-cols-1 border-y border-line md:grid-cols-3">

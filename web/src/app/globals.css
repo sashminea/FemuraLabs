@@ -284,3 +284,91 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .sim *, .sim *::before, .sim *::after { transition: none !important; animation: none !important; }
 }
+/* ===== Cursor-reactive layer ===== */
+.cfx {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: -1;
+}
+
+[data-cursor="card"] {
+  position: relative;
+}
+[data-cursor="card"]::before,
+[data-cursor="card"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: var(--lo, 0);
+}
+[data-cursor="card"]::before {
+  padding: 1px;
+  background: radial-gradient(
+    220px circle at var(--lx, 50%) var(--ly, 50%),
+    rgba(77, 163, 255, 0.75),
+    rgba(77, 163, 255, 0) 70%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+[data-cursor="card"]::after {
+  background: radial-gradient(
+    340px circle at var(--lx, 50%) var(--ly, 50%),
+    rgba(77, 163, 255, 0.075),
+    rgba(77, 163, 255, 0) 70%
+  );
+}
+
+h1,
+h2,
+[data-cursor="text"],
+#stats b,
+#proof b,
+#problem h3 {
+  text-shadow: 0 0 calc(var(--near, 0) * 30px)
+    rgba(77, 163, 255, calc(var(--near, 0) * 0.42));
+}
+
+#pipeline svg,
+#bento svg {
+  filter: drop-shadow(
+    0 0 calc(var(--near, 0) * 14px)
+      rgba(77, 163, 255, calc(var(--near, 0) * 0.5))
+  );
+}
+
+#marquee span,
+#cli button:not([aria-selected="true"]) {
+  color: rgba(236, 235, 230, calc(0.38 + 0.5 * var(--near, 0)));
+}
+
+#problem p {
+  color: rgba(236, 235, 230, calc(0.38 + 0.32 * var(--near, 0)));
+}
+
+#problem li,
+#oss a,
+#proof td {
+  border-top-color: rgba(255, 255, 255, calc(0.08 + 0.22 * var(--near, 0)));
+}
+
+#limits [data-cursor="text"] {
+  border-top-color: rgba(255, 255, 255, calc(0.2 + 0.3 * var(--near, 0)));
+}
+
+#oss a span:last-child {
+  color: color-mix(
+    in srgb,
+    var(--color-blue) calc(var(--near, 0) * 100%),
+    rgba(236, 235, 230, 0.38)
+  );
+}
+

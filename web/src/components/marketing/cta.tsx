@@ -4,7 +4,7 @@ import { site } from "@/lib/site";
 
 export function Cta() {
   return (
-    <section className="relative overflow-hidden py-24 text-center md:py-32">
+    <section id="cta" className="relative overflow-hidden py-24 text-center md:py-32">
       <div
         aria-hidden
         className="pointer-events-none absolute left-1/2 bottom-[-40%] h-[560px] w-[1000px] -translate-x-1/2 bg-[radial-gradient(closest-side,rgba(77,163,255,0.22),transparent)]"

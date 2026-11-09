@@ -17,7 +17,10 @@ const ITEMS = [
 export function Marquee() {
   const doubled = [...ITEMS, ...ITEMS];
   return (
-    <div className="overflow-hidden border-b border-line py-5 [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
+    <div
+      id="marquee"
+      className="overflow-hidden border-b border-line py-5 [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]"
+    >
       <div className="flex w-max gap-14 animate-[marquee_40s_linear_infinite] hover:[animation-play-state:paused]">
         {doubled.map((item, i) => (
           <span

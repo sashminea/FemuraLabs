@@ -36,7 +36,10 @@ export function Hero() {
   }, []);
 
   return (
-    <section className="relative overflow-hidden px-4 pt-28 pb-16 sm:px-6 sm:pt-32 sm:pb-20">
+    <section
+      id="hero"
+      className="relative overflow-hidden px-4 pt-28 pb-16 sm:px-6 sm:pt-32 sm:pb-20"
+    >
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(560px_circle_at_50%_35%,rgba(77,163,255,0.09),transparent_70%)]"
@@ -58,7 +61,10 @@ export function Hero() {
           </Button>
         </div>
 
-        <div className="mx-auto mt-12 max-w-xl overflow-hidden rounded-2xl border border-line bg-[rgba(7,8,9,0.8)] text-left backdrop-blur-md sm:mt-14 sm:max-w-2xl">
+        <div
+          data-cursor="card"
+          className="mx-auto mt-12 max-w-xl overflow-hidden rounded-2xl border border-line bg-[rgba(7,8,9,0.8)] text-left backdrop-blur-md sm:mt-14 sm:max-w-2xl"
+        >
           <div className="flex gap-1.5 border-b border-line px-4 py-2.5 sm:px-4 sm:py-3">
             <span className="h-2.5 w-2.5 rounded-full bg-white/[0.12]" />
             <span className="h-2.5 w-2.5 rounded-full bg-white/[0.12]" />
