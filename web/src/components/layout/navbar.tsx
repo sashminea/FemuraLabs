@@ -19,6 +19,7 @@ function isActive(href: string, pathname: string): boolean {
 export function Navbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const isDocs = pathname.startsWith("/docs");
   const links = isDocs ? docsNav : marketingNav;
 
@@ -34,9 +35,22 @@ export function Navbar() {
     setOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 50);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-line bg-bg/70 backdrop-blur-md">
+      <header
+        className={`fixed inset-x-0 top-0 z-50 border-b transition-[background-color,border-color,backdrop-filter] duration-300 ${
+          scrolled
+            ? "border-line bg-bg/70 backdrop-blur-md"
+            : "border-transparent bg-transparent"
+        }`}
+      >
         <div className="mx-auto flex h-16 w-full max-w-7xl items-center gap-4 px-6 md:gap-7">
           <Link
             href="/"
