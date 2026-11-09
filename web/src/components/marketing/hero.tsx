@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
@@ -9,7 +9,9 @@ const COMMAND = "femuralabs ml infer --ct scan.nii";
 export function Hero() {
   const [typed, setTyped] = useState("");
   const [showOutputs, setShowOutputs] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
 
+  // Typewriter
   useEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduced) {
@@ -35,25 +37,64 @@ export function Hero() {
     };
   }, []);
 
+  // Cursor-tracking radial glow (matches reference .hero:before with --mx/--my)
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+
+    let raf = 0;
+    const onMove = (e: PointerEvent) => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        const r = el.getBoundingClientRect();
+        el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+        el.style.setProperty("--my", `${e.clientY - r.top}px`);
+        raf = 0;
+      });
+    };
+    el.addEventListener("pointermove", onMove, { passive: true });
+    return () => {
+      el.removeEventListener("pointermove", onMove);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+
   return (
     <section
+      ref={sectionRef}
       id="hero"
-      className="relative overflow-hidden px-4 pt-28 pb-16 sm:px-6 sm:pt-32 sm:pb-20"
+      className="relative overflow-hidden px-4 pt-24 pb-14 text-center sm:flex sm:min-h-[100svh] sm:items-center sm:px-6 sm:pt-[120px] sm:pb-20"
     >
+      {/* Ambient radial — reference .hero:after */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(560px_circle_at_50%_35%,rgba(77,163,255,0.09),transparent_70%)]"
+        className="pointer-events-none absolute left-1/2 top-[-20%] h-[560px] w-[900px] -translate-x-1/2 bg-[radial-gradient(closest-side,rgba(77,163,255,0.16),transparent)]"
       />
-      <div className="relative mx-auto max-w-7xl text-center">
+      {/* Cursor-tracking radial — reference .hero:before */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(520px circle at var(--mx, 50%) var(--my, 35%), rgba(77, 163, 255, 0.09), transparent 70%)",
+        }}
+      />
+      <div className="relative mx-auto w-full max-w-7xl">
         <h1 className="mx-auto max-w-[12ch] text-[clamp(2.2rem,7.6vw,6.6rem)] font-medium leading-none tracking-[-0.065em]">
           Lower-limb CT, measured automatically.
         </h1>
-        <p className="mx-auto mt-5 max-w-[36ch] text-[clamp(0.95rem,1.4vw,1.2rem)] text-mut sm:mt-6">
+        <p className="mx-auto mt-[22px] max-w-[36ch] text-[clamp(0.95rem,1.4vw,1.2rem)] text-mut">
           Segmentation, meshes and alignment angles from one command.
         </p>
-        <div className="mt-7 flex flex-col justify-center gap-3 sm:mt-8 sm:flex-row">
+        <div className="mt-[30px] flex flex-col justify-center gap-3 sm:flex-row">
           <Button href="/docs">Read the Docs</Button>
-          <Button href="https://github.com/sashminea/FemuraLabs" variant="ghost" external>
+          <Button
+            href="https://github.com/sashminea/FemuraLabs"
+            variant="ghost"
+            external
+          >
             Get Started
           </Button>
           <Button href="/simulator" variant="ghost">
@@ -61,20 +102,23 @@ export function Hero() {
           </Button>
         </div>
 
+        {/* Terminal — reference dimensions: 560px, 96px, 14px */}
         <div
           data-cursor="card"
-          className="mx-auto mt-12 max-w-xl overflow-hidden rounded-2xl border border-line bg-[rgba(7,8,9,0.8)] text-left backdrop-blur-md sm:mt-14 sm:max-w-2xl"
+          className="mx-auto mt-10 max-w-[560px] overflow-hidden rounded-2xl border border-line bg-[rgba(7,8,9,0.8)] text-left backdrop-blur-md sm:mt-16"
         >
-          <div className="flex gap-1.5 border-b border-line px-4 py-2.5 sm:px-4 sm:py-3">
-            <span className="h-2.5 w-2.5 rounded-full bg-white/[0.12]" />
-            <span className="h-2.5 w-2.5 rounded-full bg-white/[0.12]" />
-            <span className="h-2.5 w-2.5 rounded-full bg-white/[0.12]" />
+          <div className="flex gap-1.5 border-b border-line px-3.5 py-3">
+            <span className="h-[9px] w-[9px] rounded-full bg-white/[0.12]" />
+            <span className="h-[9px] w-[9px] rounded-full bg-white/[0.12]" />
+            <span className="h-[9px] w-[9px] rounded-full bg-white/[0.12]" />
           </div>
-          <div className="min-h-[140px] whitespace-pre px-5 py-4 font-mono text-[13px] leading-[1.7] sm:min-h-[160px] sm:px-6 sm:py-5 sm:text-[15px]">
+          <div className="min-h-[96px] whitespace-pre px-5 py-[18px] font-mono text-[14px] leading-[1.7]">
             <span className="text-green">$ </span>
             {typed}
             {!showOutputs && (
-              <span className="inline-block animate-[blink_1.2s_step-end_infinite]">█</span>
+              <span className="inline-block animate-[blink_1.2s_step-end_infinite]">
+                █
+              </span>
             )}
             {showOutputs && (
               <>
@@ -84,7 +128,9 @@ export function Hero() {
                 <span className="text-dim">✓ combined_seg.nii written</span>
                 {"\n"}
                 <span className="text-green">$ </span>
-                <span className="inline-block animate-[blink_1.2s_step-end_infinite]">█</span>
+                <span className="inline-block animate-[blink_1.2s_step-end_infinite]">
+                  █
+                </span>
               </>
             )}
           </div>
