@@ -7,7 +7,8 @@ export function Problem() {
         <Reveal>
           <p className="max-w-[22ch] text-[clamp(1.8rem,4.2vw,3.4rem)] font-medium leading-[1.1] tracking-[-0.05em] text-dim">
             Limb alignment is still measured by{" "}
-            <b className="text-tx">clicking points by hand</b>. It is slow, and it varies from person to person.
+            <b className="text-tx">clicking points by hand</b>. It is slow, and it
+            varies from person to person.
           </p>
         </Reveal>
 
@@ -35,7 +36,7 @@ export function Problem() {
           </Reveal>
           <Reveal delay={120}>
             <div className="pt-8 md:border-l md:border-line md:pl-8">
-              <h3 className="gradient-text-flow mb-4 text-[clamp(1.8rem,3.4vw,2.8rem)] font-medium leading-none tracking-[-0.05em]">
+              <h3 className="mb-4 text-[clamp(1.8rem,3.4vw,2.8rem)] font-medium leading-none tracking-[-0.05em] text-tx">
                 FemuraLabs
               </h3>
               <ul>
