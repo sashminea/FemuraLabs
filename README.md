@@ -45,7 +45,7 @@ FemuraLabs automates the geometric part of that work. Given a CT volume it:
 4. computes HKA, MAD, mLDFA and MPTA;
 5. compares every automatic result with landmarks placed by hand in 3D Slicer.
 
-## What sets it apart
+## Features
 
 - **Validated against a human, not only a Dice score.** Each automatic landmark is compared with a hand click on the same subject, and the hand-placement repeat distance is reported next to it so the error can be read against the noise floor of the reference.
 - **Cross-validated segmentation.** A 4.7M-parameter 3D SegResNet (MONAI), trained from scratch, was evaluated with 4-fold cross-validation so every subject was held out once. Checkpoints were selected on the validation folds, so reported Dice carries a small optimism bias (see [Limitations](#limitations)).
