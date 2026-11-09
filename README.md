@@ -2,7 +2,7 @@
 
 # FemuraLabs
 
-**Segment, Landmark, Extract 3D bone meshes and compute lower-limb alignment angles directly from CT volumes. Includes a custom 3D U-Net and TotalSegmentator baseline.**
+**Segment, Landmark, Extract 3D bone meshes and Compute lower-limb alignment angles directly from CT volumes. Includes a custom 3D U-Net and TotalSegmentator baseline.**
 
 ![License: Apache 2.0](https://img.shields.io/badge/code-Apache%202.0-blue)
 ![Status: research prototype](https://img.shields.io/badge/status-research%20prototype-orange)
