@@ -2,7 +2,7 @@
 
 # FemuraLabs
 
-**Open-source lower-limb CT analysis: segmentation, 3D meshes, anatomical landmarks, alignment angles, and a validation report that states its own limits.**
+**Segment, Landmark, Extract 3D bone meshes and compute lower-limb alignment angles directly from CT volumes. Includes a custom 3D U-Net and TotalSegmentator baseline.**
 
 ![License: Apache 2.0](https://img.shields.io/badge/code-Apache%202.0-blue)
 ![Status: research prototype](https://img.shields.io/badge/status-research%20prototype-orange)
