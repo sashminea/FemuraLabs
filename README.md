@@ -8,8 +8,6 @@
 ![Status: research prototype](https://img.shields.io/badge/status-research%20prototype-orange)
 ![Not for clinical use](https://img.shields.io/badge/use-not%20for%20clinical%20use-red)
 
-> [!WARNING]
-> FemuraLabs is a research prototype. It is not a medical device and must not be used for diagnosis or treatment planning.
 
 | Segmentation | Landmarks | Alignment |
 |---|---|---|
@@ -32,7 +30,6 @@
 - [Documentation](#documentation)
 - [Limitations](#limitations)
 - [Citation, data and licences](#citation-data-and-licences)
-- [Author](#author)
 
 ---
 
