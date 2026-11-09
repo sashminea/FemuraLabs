@@ -88,6 +88,23 @@ body {
   100% { stroke-dashoffset: 0; opacity: 0; }
 }
 
+@keyframes glow {
+  0%,
+  45%,
+  100% {
+    border-color: var(--color-line);
+    background-image: none;
+  }
+  12% {
+    border-color: rgba(77, 163, 255, 0.75);
+    background-image: radial-gradient(
+      120% 100% at 50% 0,
+      rgba(77, 163, 255, 0.2),
+      transparent
+    );
+  }
+}
+
 /* --- Documentation prose --- */
 .prose-docs h2 {
   margin-top: clamp(3.5rem, 7vw, 6rem);
@@ -147,41 +164,18 @@ body {
   border-color: var(--color-blue);
 }
 
-/* --- Animated gradient text --- */
-@keyframes gradient-shift {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
+/* --- Emphasis gradient for the FemuraLabs comparison heading --- */
 .gradient-text-flow {
   display: inline-block;
   background: linear-gradient(
     90deg,
     var(--color-tx) 0%,
-    var(--color-blue) 45%,
-    var(--color-tx) 55%,
     var(--color-blue) 100%
   );
-  background-size: 220% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
-  animation: gradient-shift 8s ease-in-out infinite;
-  filter: drop-shadow(0 0 22px rgba(77, 163, 255, 0.16))
-    drop-shadow(0 0 46px rgba(77, 163, 255, 0.07));
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .gradient-text-flow {
-    animation: none;
-    background-position: 50% 50%;
-  }
 }
 
 /* ================= Simulator (paste at the end of globals.css) ================= */

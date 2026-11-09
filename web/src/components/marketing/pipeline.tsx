@@ -1,5 +1,17 @@
 import { Reveal } from "@/components/ui/reveal";
 
+const NODES = [
+  { title: "CT volume", sub: "Real millimetres, LPS frame" },
+  {
+    title: "SegResNet",
+    sub: "Femur, tibia, fibula, talus",
+    badge: "0.922 CV Dice",
+  },
+  { title: "3D meshes", sub: "Watertight surfaces" },
+  { title: "Landmarks", sub: "Hip, knee, ankle centres" },
+  { title: "Angles", sub: "HKA, mLDFA, MPTA" },
+];
+
 export function Pipeline() {
   return (
     <section id="pipeline" className="py-24 md:py-32">
@@ -113,17 +125,15 @@ export function Pipeline() {
             aria-hidden
             className="pointer-events-none absolute left-[5%] right-[5%] top-1/2 hidden h-px bg-line md:block"
           />
-          {[
-            { title: "CT volume", sub: "Real millimetres, LPS frame" },
-            { title: "SegResNet", sub: "Femur, tibia, fibula, talus", badge: "0.922 CV Dice" },
-            { title: "3D meshes", sub: "Watertight surfaces" },
-            { title: "Landmarks", sub: "Hip, knee, ankle centres" },
-            { title: "Angles", sub: "HKA, mLDFA, MPTA" },
-          ].map((node, i) => (
+          {NODES.map((node, i) => (
             <Reveal key={node.title} delay={i * 100}>
               <div
                 data-cursor="card"
                 className="relative rounded-2xl border border-line bg-bg p-6 md:p-7"
+                style={{
+                  animation: "glow 3.5s ease-in-out infinite",
+                  animationDelay: `${i * 0.5}s`,
+                }}
               >
                 <h3 className="mb-1.5 text-[1.05rem] font-medium tracking-[-0.03em]">
                   {node.title}
